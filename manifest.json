@@ -4,6 +4,7 @@
   "version": "1.0",
   "permissions": ["scripting", "activeTab"],
   "manifest_version": 3,
+  "host_persmission": ["http://api.groq.com/*"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": "code.png"
