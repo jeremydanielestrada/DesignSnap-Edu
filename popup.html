@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DesignSnap Edu</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="header">
+      <img src="code.png" alt="" width="50px" />
+      <h1>DesignSnap Edu</h1>
+    </div>
+
+    <div class="intro">
+      <img src="web-development.png" alt="" width="100px" />
+      <p>
+        This Chrome extension helps improve website UI by analyzing your HTML
+        and CSS. It gives simple suggestions for better design, readability and
+        accessibity.
+      </p>
+      <button id="starter-btn">Getting Started</button>
+    </div>
+
+    <div id="loader-container">
+      <div id="extraction-loader"></div>
+      <p>Extracting resources...</p>
+    </div>
+    <!-- Error -->
+    <div id="error" class="error">
+      Oppp.. there is an error extracting the resources
+    </div>
+    <div class="extracted-DOM">
+      <!-- Extracted-HTML -->
+      <h2 style="text-align: center">HTML & CSS Information</h2>
+      <h3>HTML</h3>
+      <div id="html-container">
+        <pre><code id="html-output"></code></pre>
+      </div>
+
+      <!-- Extracted-CSS -->
+      <h3>CSS</h3>
+      <div id="CSS-container">
+        <pre><code id="css-output"></code></pre>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

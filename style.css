@@ -1,0 +1,124 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100..900;1,100..900&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap");
+
+body {
+  width: 700px;
+  font-family: "Poppins";
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  border-bottom: 2px solid rgb(105, 104, 104);
+  width: 100%;
+}
+
+#starter-btn {
+  background-color: #20c997;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  width: 120px;
+  padding: 10px;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+}
+
+#starter-btn:hover {
+  background-color: #3cf0ba;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;
+  gap: 2rem;
+}
+
+p {
+  width: 300px;
+  text-align: center;
+  font-weight: 500;
+  font-size: large;
+}
+
+.extracted-DOM {
+  display: none;
+}
+
+#html-container,
+#CSS-container {
+  background-color: #2d3748;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+#html-container {
+  margin-bottom: 3rem;
+}
+
+/* #html-output {
+  color: #949494;
+  font-size: medium;
+} */
+
+
+
+pre {
+ white-space: pre-wrap; /* ✅ wrap text */
+  word-wrap: break-word; /* ✅ break very long strings */
+  overflow-x: hidden;    /* ✅ hide scroll */
+  max-width: 100%;
+}
+
+code {
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #949494; /
+}
+
+/* #css-output {
+  color: #949494;
+  font-size: medium;
+} */
+
+/* Loaders */
+
+#loader-container {
+  width: 100%;
+  display: none;
+  justify-items: center;
+  align-items: center;
+  flex-direction: column;
+}
+#extraction-loader {
+  width: 100px;
+  height: 100px;
+  border: 16px solid #f3f3f3;
+  border-top: 16px solid #20c997;
+  border-radius: 50%;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Errors */
+.error-result {
+  margin: auto;
+  text-align: center;
+}
+
+.error {
+  display: none;
+}
