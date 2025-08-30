@@ -45,14 +45,14 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
           const suggestContainer = document.querySelector(
             ".suggestions-container"
           );
-
-          suggestContainer.style.display = "block";
+          extractLoader.style.display = "flex";
 
           try {
             const suggestions = await getSuggestionBYGroq(html, css);
             console.log("Groq raw response:", suggestions);
 
             if (suggestions?.choices && suggestions.choices.length > 0) {
+              suggestContainer.style.display = "block";
               const rawContent =
                 suggestions.choices[0].message?.content || "No content.";
               const cleanedResponse = parseAIResponse(rawContent);
@@ -65,6 +65,8 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
             }
           } catch (err) {
             suggestContainer.innerHTML = "Fetch failed: " + err.message;
+          } finally {
+            extractLoader.style.display = "none";
           }
         });
 
