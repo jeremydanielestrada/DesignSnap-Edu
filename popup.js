@@ -145,12 +145,14 @@ Focus on:
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer `, /// <- dira e butang ang api sir after sa bearer e sumpay
+        Authorization: `Bearer  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`, /// <- dira e butang ang api sir after sa bearer e sumpay
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "llama3-8b-8192",
         messages: [{ role: "user", content: aiPrompt }],
+        temperature: 0.3,
+        max_tokens: 2500,
       }),
     }
   );
