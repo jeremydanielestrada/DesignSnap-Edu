@@ -39,7 +39,7 @@ body {
   gap: 2rem;
 }
 
-p {
+.intro-desc {
   width: 300px;
   text-align: center;
   font-weight: 500;
@@ -55,6 +55,7 @@ p {
   background-color: #2d3748;
   border-radius: 10px;
   padding: 1rem;
+  margin-bottom: 3rem;
 }
 
 #html-container {
@@ -66,12 +67,10 @@ p {
   font-size: medium;
 } */
 
-
-
 pre {
- white-space: pre-wrap; /* ✅ wrap text */
-  word-wrap: break-word; /* ✅ break very long strings */
-  overflow-x: hidden;    /* ✅ hide scroll */
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-x: hidden;
   max-width: 100%;
 }
 
@@ -95,6 +94,7 @@ code {
   justify-items: center;
   align-items: center;
   flex-direction: column;
+  margin-top: 2rem;
 }
 #extraction-loader {
   width: 100px;
@@ -115,11 +115,45 @@ code {
 }
 
 /* Errors */
-.error-result {
+
+.error {
+  display: none;
   margin: auto;
   text-align: center;
 }
 
 .error {
   display: none;
+}
+
+
+/* Suggestion Styles */
+#suggest-btn {
+  background-color: #20c997;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  width: 500px;
+  padding: 10px;
+  cursor: pointer;
+  position: fixed;
+  z-index: 1000;
+  bottom: 10px;
+  left: 15%;
+}
+
+#suggest-btn:hover {
+  background-color: #3cf0ba;
+}
+
+.suggestions-container {
+  background-color: #2d3748;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 2rem;
+  display: none;
+}
+
+.issue-explanation p {
+
 }

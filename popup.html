@@ -14,7 +14,7 @@
 
     <div class="intro">
       <img src="web-development.png" alt="" width="100px" />
-      <p>
+      <p class="intro-desc">
         This Chrome extension helps improve website UI by analyzing your HTML
         and CSS. It gives simple suggestions for better design, readability and
         accessibity.
@@ -24,12 +24,13 @@
 
     <div id="loader-container">
       <div id="extraction-loader"></div>
-      <p>Extracting resources...</p>
+      <p id="loader-text">Extracting resources...</p>
     </div>
     <!-- Error -->
     <div id="error" class="error">
       Oppp.. there is an error extracting the resources
     </div>
+
     <div class="extracted-DOM">
       <!-- Extracted-HTML -->
       <h2 style="text-align: center">HTML & CSS Information</h2>
@@ -43,7 +44,12 @@
       <div id="CSS-container">
         <pre><code id="css-output"></code></pre>
       </div>
+
+      <button id="suggest-btn">Generate Suggestions</button>
     </div>
+
+    <!-- Suggested Enhancements -->
+    <div class="suggestions-container"></div>
 
     <script src="popup.js"></script>
   </body>
