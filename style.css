@@ -61,10 +61,6 @@ body {
   margin-bottom: 3rem;
 }
 
-/* #html-output {
-  color: #949494;
-  font-size: medium;
-} */
 
 
 
@@ -95,6 +91,7 @@ code {
   justify-items: center;
   align-items: center;
   flex-direction: column;
+  margin-top: 2rem;
 }
 #extraction-loader {
   width: 100px;
@@ -115,13 +112,12 @@ code {
 }
 
 /* Errors */
-.error-result {
-  margin: auto;
-  text-align: center;
-}
+
 
 .error {
   display: none;
+  margin: auto;
+  text-align: center;
 }
 
 
@@ -155,6 +151,6 @@ code {
   display: none;
 }
 
-.issue-explanation p {
-
+.issues-explanation p {
+  color: white;
 }

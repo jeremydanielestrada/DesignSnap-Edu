@@ -1,4 +1,4 @@
-document.getElementById("starter-btn").addEventListener("click", async () => {
+ddocument.getElementById("starter-btn").addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const starter = document.querySelector(".intro");
   const extractLoader = document.getElementById("loader-container");
@@ -7,8 +7,8 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
 
   //removing the introduction
   starter.style.display = "none";
-  extractedDOM.classList.remove("extracted-DOM");
 
+  extractLoader.style.display = "block";
   chrome.scripting.executeScript(
     {
       target: { tabId: tab.id },
@@ -19,9 +19,9 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
       const cssOutput = document.getElementById("css-output");
       const { html, css } = results[0].result;
 
-      extractLoader.style.display = "flex";
-
       if (chrome.runtime.lastError || !results) {
+        extractLoader.style.display = "none";
+        isError.style.display = "block";
         isError.innerHTML = "Error: " + chrome.runtime.lastError.message;
         extractedDOM.style.display = "none";
       }
@@ -29,9 +29,9 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
       try {
         htmlOutput.textContent = html.trim();
         cssOutput.textContent = css.trim();
+        extractedDOM.classList.remove("extracted-DOM");
       } catch {
-        isError.classList.remove("error");
-        isError.classList.add("error-result");
+        isError.style.display = "block";
       } finally {
         extractLoader.style.display = "none";
       }
@@ -45,7 +45,9 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
           const suggestContainer = document.querySelector(
             ".suggestions-container"
           );
+          const loaderText = document.querySelector("#loader-text");
           extractLoader.style.display = "flex";
+          loaderText.textContent = "Generating Suggestions";
 
           try {
             const suggestions = await getSuggestionBYGroq(html, css);
@@ -95,11 +97,12 @@ function parseAIResponse(content) {
   }
 
   // Add code blocks
-  output += `<h3>HTML Suggestions:</h3><pre><code class="language-html">${escapeHtml(
+  output += `<div class="html-container><h3>HTML Suggestions:</h3><pre><code class="language-html">${escapeHtml(
     htmlCode
-  )}</code></pre><h3>CSS Suggestions:</h3><pre><code class="language-css">${escapeHtml(
+  )}</code></pre></div>
+  <div class="css-container"><h3>CSS Suggestions:</h3><pre><code class="language-css">${escapeHtml(
     cssCode
-  )}</code></pre>`;
+  )}</code></pre></div>`;
 
   return output;
 }
