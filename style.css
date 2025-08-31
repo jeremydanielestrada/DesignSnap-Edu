@@ -77,7 +77,7 @@ code {
   display: block;
   font-size: 0.9rem;
   line-height: 1.5;
-  color: #949494;
+  color: #949494; /
 }
 
 /* #css-output {
@@ -93,6 +93,7 @@ code {
   justify-items: center;
   align-items: center;
   flex-direction: column;
+  margin-top: 2rem;
 }
 #extraction-loader {
   width: 100px;
@@ -113,7 +114,9 @@ code {
 }
 
 /* Errors */
-.error-result {
+
+.error {
+  display: none;
   margin: auto;
   text-align: center;
 }
@@ -121,6 +124,7 @@ code {
 .error {
   display: none;
 }
+
 
 /* Suggestion Styles */
 #suggest-btn {
@@ -146,7 +150,9 @@ code {
   border-radius: 10px;
   padding: 1rem;
   margin-top: 2rem;
+  display: none;
 }
 
 .issue-explanation p {
+
 }

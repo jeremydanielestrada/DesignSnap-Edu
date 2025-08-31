@@ -7,8 +7,8 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
 
   //removing the introduction
   starter.style.display = "none";
-  extractedDOM.classList.remove("extracted-DOM");
 
+  extractLoader.style.display = "block";
   chrome.scripting.executeScript(
     {
       target: { tabId: tab.id },
@@ -19,9 +19,9 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
       const cssOutput = document.getElementById("css-output");
       const { html, css } = results[0].result;
 
-      extractLoader.style.display = "flex";
-
       if (chrome.runtime.lastError || !results) {
+        extractLoader.style.display = "none";
+        isError.style.display = "block";
         isError.innerHTML = "Error: " + chrome.runtime.lastError.message;
         extractedDOM.style.display = "none";
       }
@@ -29,9 +29,9 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
       try {
         htmlOutput.textContent = html.trim();
         cssOutput.textContent = css.trim();
+        extractedDOM.classList.remove("extracted-DOM");
       } catch {
-        isError.classList.remove("error");
-        isError.classList.add("error-result");
+        isError.style.display = "block";
       } finally {
         extractLoader.style.display = "none";
       }
@@ -45,12 +45,16 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
           const suggestContainer = document.querySelector(
             ".suggestions-container"
           );
+          const loaderText = document.querySelector("#loader-text");
+          extractLoader.style.display = "flex";
+          loaderText.textContent = "Generating Suggestions";
 
           try {
             const suggestions = await getSuggestionBYGroq(html, css);
             console.log("Groq raw response:", suggestions);
 
             if (suggestions?.choices && suggestions.choices.length > 0) {
+              suggestContainer.style.display = "block";
               const rawContent =
                 suggestions.choices[0].message?.content || "No content.";
               const cleanedResponse = parseAIResponse(rawContent);
@@ -63,6 +67,8 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
             }
           } catch (err) {
             suggestContainer.innerHTML = "Fetch failed: " + err.message;
+          } finally {
+            extractLoader.style.display = "none";
           }
         });
 
@@ -91,11 +97,12 @@ function parseAIResponse(content) {
   }
 
   // Add code blocks
-  output += `<h3>HTML Suggestions:</h3><pre><code class="language-html">${escapeHtml(
+  output += `<h3>HTML Suggestions:</h3><div class="html-container"><pre><code class="language-html">${escapeHtml(
     htmlCode
-  )}</code></pre><h3>CSS Suggestions:</h3><pre><code class="language-css">${escapeHtml(
+  )}</code></pre></div>
+<h3>CSS Suggestions:</h3><div class="css-container"><pre><code class="language-css">${escapeHtml(
     cssCode
-  )}</code></pre>`;
+  )}</code></pre></div>`;
 
   return output;
 }
@@ -108,52 +115,16 @@ function escapeHtml(text) {
 }
 
 //Get suggestion by ai
+
+///remove api key!!
 async function getSuggestionBYGroq(html, css) {
-  const aiPrompt = `Analyze this HTML and CSS code and provide a brief explanation of the main issues, followed by improved code suggestions.
-
-Start with a short analysis of the main UI, accessibility, and design issues you found in the current page. Then provide the improved code.
-
-Format your response like this:
-
-[Brief explanation of issues found - 2-3 sentences about main problems with design, accessibility, or readability]
-
-HTML:
-\`\`\`html
-[improved HTML code here]
-\`\`\`
-
-CSS:
-\`\`\`css
-[improved CSS code here]
-\`\`\`
-
-HTML to analyze:
-${html}
-
-CSS to analyze:
-${css}
-
-Focus on:
-- Identifying main design and accessibility issues
-- Providing semantic HTML improvements
-- Enhancing CSS for better visual design
-- Adding accessibility attributes
-- Improving readability and user experience`;
-
-  const response = await fetch(
-    "https://api.groq.com/openai/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer `, /// <- dira e butang ang api sir after sa bearer e sumpay
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama3-8b-8192",
-        messages: [{ role: "user", content: aiPrompt }],
-      }),
-    }
-  );
+  const response = await fetch("https://dse-server.vercel.app/api/suggest", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ html, css }),
+  });
 
   if (!response.ok) {
     throw new Error("Groq API request failed: " + response.statusText);
