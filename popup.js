@@ -1,4 +1,4 @@
-ddocument.getElementById("starter-btn").addEventListener("click", async () => {
+document.getElementById("starter-btn").addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const starter = document.querySelector(".intro");
   const extractLoader = document.getElementById("loader-container");
@@ -97,10 +97,10 @@ function parseAIResponse(content) {
   }
 
   // Add code blocks
-  output += `<div class="html-container><h3>HTML Suggestions:</h3><pre><code class="language-html">${escapeHtml(
+  output += `<h3>HTML Suggestions:</h3><div class="html-container"><pre><code class="language-html">${escapeHtml(
     htmlCode
   )}</code></pre></div>
-  <div class="css-container"><h3>CSS Suggestions:</h3><pre><code class="language-css">${escapeHtml(
+<h3>CSS Suggestions:</h3><div class="css-container"><pre><code class="language-css">${escapeHtml(
     cssCode
   )}</code></pre></div>`;
 

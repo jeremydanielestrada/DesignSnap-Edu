@@ -61,13 +61,10 @@ body {
   margin-bottom: 3rem;
 }
 
-
-
-
 pre {
- white-space: pre-wrap; 
-  word-wrap: break-word;  
-  overflow-x: hidden;    
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-x: hidden;
   max-width: 100%;
 }
 
@@ -75,7 +72,8 @@ code {
   display: block;
   font-size: 0.9rem;
   line-height: 1.5;
-  color: #949494; /
+  color: #949494;
+  margin: 1rem;
 }
 
 /* #css-output {
@@ -99,7 +97,7 @@ code {
   border: 16px solid #f3f3f3;
   border-top: 16px solid #20c997;
   border-radius: 50%;
-  animation: spin 2s linear infinite  ;
+  animation: spin 2s linear infinite;
 }
 
 @keyframes spin {
@@ -113,16 +111,14 @@ code {
 
 /* Errors */
 
-
 .error {
   display: none;
   margin: auto;
   text-align: center;
 }
 
-
 /* Suggestion Styles */
-#suggest-btn{
+#suggest-btn {
   background-color: #20c997;
   font-weight: bold;
   border: none;
@@ -130,21 +126,18 @@ code {
   width: 500px;
   padding: 10px;
   cursor: pointer;
-  position: fixed; 
+  position: fixed;
   z-index: 1000;
-  bottom:  10px;
+  bottom: 10px;
   left: 15%;
 }
-
 
 #suggest-btn:hover {
   background-color: #3cf0ba;
 }
 
-
-
-.suggestions-container{
-  background-color:#2d3748 ;
+.suggestions-container {
+  background-color: #2d3748;
   border-radius: 10px;
   padding: 1rem;
   margin-top: 2rem;
@@ -153,4 +146,15 @@ code {
 
 .issues-explanation p {
   color: white;
+}
+
+.html-container {
+  border: 2px solid #20c997;
+  margin-top: 1.3rem;
+  display: block;
+}
+
+.css-container {
+  border: 2px solid #20c997;
+  display: block;
 }
