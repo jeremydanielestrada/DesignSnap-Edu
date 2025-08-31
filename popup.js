@@ -115,6 +115,8 @@ function escapeHtml(text) {
 }
 
 //Get suggestion by ai
+
+///remove api key!!
 async function getSuggestionBYGroq(html, css) {
   const response = await fetch("https://dse-server.vercel.app/api/suggest", {
     method: "POST",
