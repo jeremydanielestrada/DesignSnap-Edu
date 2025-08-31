@@ -116,7 +116,7 @@ function escapeHtml(text) {
 
 //Get suggestion by ai
 async function getSuggestionBYGroq(html, css) {
-  const response = await fetch("http://localhost:3000/api/suggest", {
+  const response = await fetch("https://dse-server.vercel.app/api/suggest", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
