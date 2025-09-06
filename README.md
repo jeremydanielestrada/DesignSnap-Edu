@@ -1,1 +1,1 @@
-<p>A Chrome Extenstion built with groq AI api for chrome enhancements</p>
+<p>A Chrome Extension built with groq AI api for chrome enhancements</p>
