@@ -130,9 +130,9 @@ async function handleSuggestions(html, css, extractLoader, extractedDOM) {
     const suggestions = await getSuggestionBYGroq(html, css);
     console.log("Groq raw response:", suggestions);
 
-    if (suggestions?.choices?.length > 0) {
-      const rawContent =
-        suggestions.choices[0].message?.content || "No content.";
+    // Handle the API response format: { success: true, analysis: "..." }
+    if (suggestions?.success && suggestions?.analysis) {
+      const rawContent = suggestions.analysis;
       const cleanedResponse = parseAIResponse(rawContent);
       suggestionsContent.innerHTML = cleanedResponse;
       suggestContainer.style.display = "block";
@@ -143,14 +143,21 @@ async function handleSuggestions(html, css, extractLoader, extractedDOM) {
       suggestionsContent.innerHTML = `
         <div class="error-message">
           <h3>🚫 API Error</h3>
-          <p>Groq API Error: ${suggestions.error.message}</p>
+          <p>API Error: ${suggestions.error}</p>
         </div>`;
+      suggestContainer.style.display = "block";
     } else {
       suggestionsContent.innerHTML = `
         <div class="error-message">
           <h3>⚠️ Unexpected Response</h3>
           <p>Received an unexpected response from the AI service. Please try again.</p>
+          <pre style="text-align: left; background: #f5f5f5; padding: 1rem; border-radius: 6px; margin-top: 1rem; overflow: auto;">${JSON.stringify(
+            suggestions,
+            null,
+            2
+          )}</pre>
         </div>`;
+      suggestContainer.style.display = "block";
     }
   } catch (err) {
     console.error("Suggestion error:", err);
@@ -197,25 +204,47 @@ function initializeSuggestionCopyButtons() {
  * Parses and formats AI response into safe HTML
  */
 function parseAIResponse(content) {
-  const explanationMatch = content.match(/^([\s\S]*?)(?=HTML:|```html)/);
+  // Try to extract different sections from the AI response
+  const analysisSummaryMatch = content.match(
+    /###?\s*\s*\*?\*?ANALYSIS SUMMARY\*?\*?([\s\S]*?)(?=###|$)/i
+  );
+  const keyIssuesMatch = content.match(
+    /###?\s*⚠️\s*\*?\*?KEY ISSUES IDENTIFIED\*?\*?([\s\S]*?)(?=###|$)/i
+  );
   const htmlMatch = content.match(/```html\n([\s\S]*?)\n```/);
   const cssMatch = content.match(/```css\n([\s\S]*?)\n```/);
-
-  const explanation = explanationMatch ? explanationMatch[1].trim() : "";
-  const htmlCode = htmlMatch ? htmlMatch[1] : "No HTML suggestions provided";
-  const cssCode = cssMatch ? cssMatch[1] : "No CSS suggestions provided";
+  const implementationNotesMatch = content.match(
+    /###?\s*\s*\*?\*?IMPLEMENTATION NOTES\*?\*?([\s\S]*?)(?=###|$)/i
+  );
 
   let output = "";
 
-  if (explanation) {
-    output += `
-      <div class="issues-explanation">
-        <h3>Analysis & Recommendations</h3>
+  // Analysis Summary Section
+  if (analysisSummaryMatch || keyIssuesMatch) {
+    output += `<div class="issues-explanation">`;
+
+    if (analysisSummaryMatch) {
+      output += `
+        <h3>🔍 Analysis Summary</h3>
         <div class="explanation-content">
-          <p>${escapeHtml(explanation).replace(/\n/g, "</p><p>")}</p>
-        </div>
-      </div>`;
+          ${formatMarkdownText(analysisSummaryMatch[1].trim())}
+        </div>`;
+    }
+
+    if (keyIssuesMatch) {
+      output += `
+        <h3>⚠️ Key Issues Identified</h3>
+        <div class="explanation-content">
+          ${formatMarkdownText(keyIssuesMatch[1].trim())}
+        </div>`;
+    }
+
+    output += `</div>`;
   }
+
+  // Code suggestions
+  const htmlCode = htmlMatch ? htmlMatch[1] : "No HTML suggestions provided";
+  const cssCode = cssMatch ? cssMatch[1] : "No CSS suggestions provided";
 
   output += `
     <div class="suggestions-grid">
@@ -238,21 +267,62 @@ function parseAIResponse(content) {
           <pre><code class="language-css">${escapeHtml(cssCode)}</code></pre>
         </div>
       </div>
-    </div>
-    
-    <div class="suggestion-footer">
-      <div class="tip-box">
-        <h4>💡 Implementation Tips</h4>
-        <ul>
-          <li>Test changes in a development environment first</li>
-          <li>Ensure accessibility standards are maintained</li>
-          <li>Consider mobile responsiveness for all modifications</li>
-          <li>Validate your HTML and CSS after implementation</li>
-        </ul>
-      </div>
     </div>`;
 
+  // Implementation Notes
+  if (implementationNotesMatch) {
+    output += `
+      <div class="suggestion-footer">
+        <div class="tip-box">
+          <h4>🎯 Implementation Notes</h4>
+          ${formatMarkdownText(implementationNotesMatch[1].trim())}
+        </div>
+      </div>`;
+  } else {
+    output += `
+      <div class="suggestion-footer">
+        <div class="tip-box">
+          <h4>💡 Implementation Tips</h4>
+          <ul>
+            <li>Test changes in a development environment first</li>
+            <li>Ensure accessibility standards are maintained</li>
+            <li>Consider mobile responsiveness for all modifications</li>
+            <li>Validate your HTML and CSS after implementation</li>
+          </ul>
+        </div>
+      </div>`;
+  }
+
   return output;
+}
+
+/**
+ * Formats markdown-style text to HTML
+ */
+function formatMarkdownText(text) {
+  // Convert markdown lists to HTML
+  let formatted = text
+    .replace(
+      /^\s*-\s+\*\*(.+?):\*\*\s+(.+)$/gm,
+      "<li><strong>$1:</strong> $2</li>"
+    )
+    .replace(
+      /^\s*-\s+\*\*(.+?)\*\*\s+(.+)$/gm,
+      "<li><strong>$1</strong> $2</li>"
+    )
+    .replace(/^\s*-\s+(.+)$/gm, "<li>$1</li>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\n\n/g, "</p><p>");
+
+  // Wrap lists in ul tags
+  formatted = formatted.replace(/(<li>[\s\S]+?<\/li>)/g, "<ul>$1</ul>");
+
+  // Wrap text in paragraphs if not already in a list
+  if (!formatted.includes("<ul>") && !formatted.includes("<li>")) {
+    formatted = `<p>${formatted}</p>`;
+  }
+
+  return formatted;
 }
 
 /**
