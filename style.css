@@ -14,11 +14,13 @@ body {
 }
 
 .app-container {
+  width: 100%;
   max-width: 1000px;
   margin: 0 auto;
   background: white;
   min-height: 100vh;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  overflow-x: hidden;
 }
 
 /* Enhanced Header */
