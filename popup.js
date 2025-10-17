@@ -1,3 +1,65 @@
+async function showSnapshot() {
+  const { image } = await chrome.runtime.sendMessage({
+    type: "GET_CAPTURED_IMAGE",
+  });
+  if (image) {
+    const snapshotContainer = document.getElementById("snapshot-container");
+    snapshotContainer.innerHTML = `<img src="${image}" alt="Tab Snapshot" style="max-width:100%;border-radius:8px;" />`;
+  }
+}
+
+// Initialize UI enhancements
+function initializeUI() {
+  // Tab switching functionality
+  const tabBtns = document.querySelectorAll(".tab-btn");
+  const tabContents = document.querySelectorAll(".tab-content");
+
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetTab = btn.getAttribute("data-tab");
+
+      // Remove active class from all tabs and contents
+      tabBtns.forEach((b) => b.classList.remove("active"));
+      tabContents.forEach((c) => c.classList.remove("active"));
+
+      // Add active class to clicked tab and corresponding content
+      btn.classList.add("active");
+      document.getElementById(`${targetTab}-tab`).classList.add("active");
+    });
+  });
+
+  // Copy functionality
+  const copyBtns = document.querySelectorAll(".copy-btn");
+  copyBtns.forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const targetId = btn.getAttribute("data-target");
+      const codeElement = document.getElementById(targetId);
+
+      if (codeElement) {
+        try {
+          await navigator.clipboard.writeText(codeElement.textContent);
+          btn.innerHTML = "✅ Copied!";
+          setTimeout(() => {
+            btn.innerHTML = "📋 Copy";
+          }, 2000);
+        } catch (err) {
+          console.error("Failed to copy:", err);
+          btn.innerHTML = "❌ Failed";
+          setTimeout(() => {
+            btn.innerHTML = "📋 Copy";
+          }, 2000);
+        }
+      }
+    });
+  });
+}
+
+// Call this function when you want to display the snapshot, e.g., on popup load:
+document.addEventListener("DOMContentLoaded", () => {
+  showSnapshot();
+  initializeUI();
+});
+
 document.getElementById("starter-btn").addEventListener("click", async () => {
   const { tabId } = await chrome.runtime.sendMessage({ type: "GET_LAST_TAB" });
 
@@ -56,11 +118,12 @@ document.getElementById("starter-btn").addEventListener("click", async () => {
  */
 async function handleSuggestions(html, css, extractLoader, extractedDOM) {
   const suggestContainer = document.querySelector(".suggestions-container");
+  const suggestionsContent = document.querySelector(".suggestions-content");
   const loaderText = document.querySelector("#loader-text");
 
   suggestContainer.style.display = "none";
   extractLoader.style.display = "flex";
-  loaderText.textContent = "Generating Suggestions...";
+  loaderText.textContent = "Generating AI Suggestions...";
   extractedDOM.style.display = "none";
 
   try {
@@ -71,20 +134,63 @@ async function handleSuggestions(html, css, extractLoader, extractedDOM) {
       const rawContent =
         suggestions.choices[0].message?.content || "No content.";
       const cleanedResponse = parseAIResponse(rawContent);
-      suggestContainer.innerHTML = cleanedResponse;
+      suggestionsContent.innerHTML = cleanedResponse;
       suggestContainer.style.display = "block";
+
+      // Initialize copy functionality for suggestion code blocks
+      initializeSuggestionCopyButtons();
     } else if (suggestions?.error) {
-      suggestContainer.innerHTML =
-        "Groq API Error: " + suggestions.error.message;
+      suggestionsContent.innerHTML = `
+        <div class="error-message">
+          <h3>🚫 API Error</h3>
+          <p>Groq API Error: ${suggestions.error.message}</p>
+        </div>`;
     } else {
-      suggestContainer.innerHTML = "Unexpected response from Groq.";
+      suggestionsContent.innerHTML = `
+        <div class="error-message">
+          <h3>⚠️ Unexpected Response</h3>
+          <p>Received an unexpected response from the AI service. Please try again.</p>
+        </div>`;
     }
   } catch (err) {
     console.error("Suggestion error:", err);
-    suggestContainer.innerHTML = "Fetch failed: " + err.message;
+    suggestionsContent.innerHTML = `
+      <div class="error-message">
+        <h3>🔌 Connection Error</h3>
+        <p>Failed to connect to AI service: ${err.message}</p>
+        <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #20c997; color: white; border: none; border-radius: 6px; cursor: pointer;">
+          🔄 Try Again
+        </button>
+      </div>`;
   } finally {
     extractLoader.style.display = "none";
   }
+}
+
+// Initialize copy buttons for suggestion code blocks
+function initializeSuggestionCopyButtons() {
+  const suggestionCopyBtns = document.querySelectorAll(".suggestion-copy-btn");
+  suggestionCopyBtns.forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const codeBlock = btn.closest(".code-suggestion").querySelector("code");
+
+      if (codeBlock) {
+        try {
+          await navigator.clipboard.writeText(codeBlock.textContent);
+          btn.innerHTML = "✅ Copied!";
+          setTimeout(() => {
+            btn.innerHTML = "📋 Copy Code";
+          }, 2000);
+        } catch (err) {
+          console.error("Failed to copy:", err);
+          btn.innerHTML = "❌ Failed";
+          setTimeout(() => {
+            btn.innerHTML = "📋 Copy Code";
+          }, 2000);
+        }
+      }
+    });
+  });
 }
 
 /**
@@ -104,19 +210,46 @@ function parseAIResponse(content) {
   if (explanation) {
     output += `
       <div class="issues-explanation">
-        <h3>Issues Analysis:</h3>
-        <p>${escapeHtml(explanation)}</p>
+        <h3>Analysis & Recommendations</h3>
+        <div class="explanation-content">
+          <p>${escapeHtml(explanation).replace(/\n/g, "</p><p>")}</p>
+        </div>
       </div>`;
   }
 
   output += `
-    <h3>HTML Suggestions:</h3>
-    <div class="html-container">
-      <pre><code class="language-html">${escapeHtml(htmlCode)}</code></pre>
+    <div class="suggestions-grid">
+      <div class="code-suggestion html-suggestion">
+        <div class="suggestion-header">
+          <h3>📄 HTML Suggestions</h3>
+          <button class="suggestion-copy-btn">📋 Copy Code</button>
+        </div>
+        <div class="html-container">
+          <pre><code class="language-html">${escapeHtml(htmlCode)}</code></pre>
+        </div>
+      </div>
+      
+      <div class="code-suggestion css-suggestion">
+        <div class="suggestion-header">
+          <h3>🎨 CSS Suggestions</h3>
+          <button class="suggestion-copy-btn">📋 Copy Code</button>
+        </div>
+        <div class="css-container">
+          <pre><code class="language-css">${escapeHtml(cssCode)}</code></pre>
+        </div>
+      </div>
     </div>
-    <h3>CSS Suggestions:</h3>
-    <div class="css-container">
-      <pre><code class="language-css">${escapeHtml(cssCode)}</code></pre>
+    
+    <div class="suggestion-footer">
+      <div class="tip-box">
+        <h4>💡 Implementation Tips</h4>
+        <ul>
+          <li>Test changes in a development environment first</li>
+          <li>Ensure accessibility standards are maintained</li>
+          <li>Consider mobile responsiveness for all modifications</li>
+          <li>Validate your HTML and CSS after implementation</li>
+        </ul>
+      </div>
     </div>`;
 
   return output;
