@@ -16,7 +16,6 @@ chrome.action.onClicked.addListener(async () => {
     width: 1000,
     height: 800,
     focused: true,
-    resizable: true,
   });
 });
 
