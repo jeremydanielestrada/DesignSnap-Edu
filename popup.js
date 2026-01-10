@@ -70,7 +70,14 @@ function initializeSuggestionCopyButtons() {
   const suggestionCopyBtns = document.querySelectorAll(".suggestion-copy-btn");
   suggestionCopyBtns.forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const codeBlock = btn.closest(".code-suggestion")?.querySelector("code");
+      // Try multiple fallbacks to locate the associated <code> block
+      const codeBlock =
+        btn.closest(".code-suggestion")?.querySelector("code") ||
+        btn.closest(".card")?.querySelector("code") ||
+        // fallback: button in header, look for code in sibling card-body
+        btn.parentElement?.nextElementSibling?.querySelector("code") ||
+        // last-resort: search nearby container
+        btn.closest("div")?.querySelector("code");
       if (!codeBlock) return;
       try {
         await navigator.clipboard.writeText(codeBlock.textContent || "");
