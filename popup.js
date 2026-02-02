@@ -154,13 +154,13 @@ async function handleSuggestions(html, css, extractLoader, extractedDOM) {
           <pre style="text-align: left; background: #f5f5f5; padding: 1rem; border-radius: 6px; margin-top: 1rem; overflow: auto;">${JSON.stringify(
             suggestions,
             null,
-            2
+            2,
           )}</pre>
         </div>`;
       suggestContainer.style.display = "block";
     }
   } catch (err) {
-    console.error("Suggestion error:", err);
+    console.error("Suggestion error:", err.message, err.status, err.response);
     suggestionsContent.innerHTML = `
       <div class="error-message">
         <h3>🔌 Connection Error</h3>
@@ -206,15 +206,15 @@ function initializeSuggestionCopyButtons() {
 function parseAIResponse(content) {
   // Try to extract different sections from the AI response
   const analysisSummaryMatch = content.match(
-    /###?\s*\s*\*?\*?ANALYSIS SUMMARY\*?\*?([\s\S]*?)(?=###|$)/i
+    /###?\s*\s*\*?\*?ANALYSIS SUMMARY\*?\*?([\s\S]*?)(?=###|$)/i,
   );
   const keyIssuesMatch = content.match(
-    /###?\s*⚠️\s*\*?\*?KEY ISSUES IDENTIFIED\*?\*?([\s\S]*?)(?=###|$)/i
+    /###?\s*⚠️\s*\*?\*?KEY ISSUES IDENTIFIED\*?\*?([\s\S]*?)(?=###|$)/i,
   );
   const htmlMatch = content.match(/```html\n([\s\S]*?)\n```/);
   const cssMatch = content.match(/```css\n([\s\S]*?)\n```/);
   const implementationNotesMatch = content.match(
-    /###?\s*\s*\*?\*?IMPLEMENTATION NOTES\*?\*?([\s\S]*?)(?=###|$)/i
+    /###?\s*\s*\*?\*?IMPLEMENTATION NOTES\*?\*?([\s\S]*?)(?=###|$)/i,
   );
 
   let output = "";
@@ -304,11 +304,11 @@ function formatMarkdownText(text) {
   let formatted = text
     .replace(
       /^\s*-\s+\*\*(.+?):\*\*\s+(.+)$/gm,
-      "<li><strong>$1:</strong> $2</li>"
+      "<li><strong>$1:</strong> $2</li>",
     )
     .replace(
       /^\s*-\s+\*\*(.+?)\*\*\s+(.+)$/gm,
-      "<li><strong>$1</strong> $2</li>"
+      "<li><strong>$1</strong> $2</li>",
     )
     .replace(/^\s*-\s+(.+)$/gm, "<li>$1</li>")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
