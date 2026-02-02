@@ -162,6 +162,38 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /**
+ * Animates loader steps sequentially with delays
+ */
+function animateLoaderSteps() {
+  const steps = document.querySelectorAll(".loader-steps .step");
+  steps.forEach((step) => {
+    step.classList.remove("active", "completed");
+  });
+
+  let delay = 0;
+  steps.forEach((step, index) => {
+    setTimeout(() => {
+      step.classList.add("active");
+
+      // Mark previous steps as completed
+      if (index > 0) {
+        steps[index - 1].classList.remove("active");
+        steps[index - 1].classList.add("completed");
+      }
+    }, delay);
+    delay += 800; // 800ms delay between each step
+  });
+
+  // Mark the last step as completed after animation finishes
+  setTimeout(() => {
+    if (steps.length > 0) {
+      steps[steps.length - 1].classList.remove("active");
+      steps[steps.length - 1].classList.add("completed");
+    }
+  }, delay);
+}
+
+/**
  * Handles the suggestion flow (shows spinner, calls API, renders results)
  */
 async function handleSuggestions(html, css) {
@@ -178,6 +210,9 @@ async function handleSuggestions(html, css) {
   suggestContainer.classList.add("d-none");
   loader.classList.remove("d-none");
   if (loaderText) loaderText.textContent = "Generating AI Suggestions...";
+
+  // Animate loader steps
+  animateLoaderSteps();
 
   try {
     const suggestions = await getSuggestionBYGroq(html, css);
