@@ -8,203 +8,219 @@ async function showSnapshot() {
   }
 }
 
-// Initialize UI enhancements
 function initializeUI() {
-  // Tab switching functionality
   const tabBtns = document.querySelectorAll(".tab-btn");
   const tabContents = document.querySelectorAll(".tab-content");
 
   tabBtns.forEach((btn) => {
+    btn.setAttribute("role", "tab");
+    btn.setAttribute(
+      "aria-selected",
+      btn.classList.contains("active") ? "true" : "false",
+    );
+
     btn.addEventListener("click", () => {
       const targetTab = btn.getAttribute("data-tab");
+      if (!targetTab) return;
 
-      // Remove active class from all tabs and contents
-      tabBtns.forEach((b) => b.classList.remove("active"));
-      tabContents.forEach((c) => c.classList.remove("active"));
+      tabBtns.forEach((b) => {
+        b.classList.remove("active");
+        b.setAttribute("aria-selected", "false");
+      });
 
-      // Add active class to clicked tab and corresponding content
+      tabContents.forEach((c) => {
+        c.classList.add("d-none");
+        c.classList.remove("active");
+        c.setAttribute("aria-hidden", "true");
+      });
+
       btn.classList.add("active");
-      document.getElementById(`${targetTab}-tab`).classList.add("active");
+      btn.setAttribute("aria-selected", "true");
+
+      const content = document.getElementById(`${targetTab}-tab`);
+      if (content) {
+        content.classList.remove("d-none");
+        content.classList.add("active");
+        content.setAttribute("aria-hidden", "false");
+      }
     });
   });
 
-  // Copy functionality
   const copyBtns = document.querySelectorAll(".copy-btn");
   copyBtns.forEach((btn) => {
+    btn.dataset.origLabel = btn.innerHTML || "Copy";
     btn.addEventListener("click", async () => {
       const targetId = btn.getAttribute("data-target");
       const codeElement = document.getElementById(targetId);
-
-      if (codeElement) {
-        try {
-          await navigator.clipboard.writeText(codeElement.textContent);
-          btn.innerHTML = "✅ Copied!";
-          setTimeout(() => {
-            btn.innerHTML = "📋 Copy";
-          }, 2000);
-        } catch (err) {
-          console.error("Failed to copy:", err);
-          btn.innerHTML = "❌ Failed";
-          setTimeout(() => {
-            btn.innerHTML = "📋 Copy";
-          }, 2000);
-        }
+      if (!codeElement) return;
+      try {
+        await navigator.clipboard.writeText(codeElement.textContent || "");
+        btn.innerHTML = "✅ Copied!";
+        setTimeout(() => (btn.innerHTML = btn.dataset.origLabel), 1500);
+      } catch (err) {
+        console.error("Failed to copy:", err);
+        btn.innerHTML = "❌ Failed";
+        setTimeout(() => (btn.innerHTML = btn.dataset.origLabel), 1500);
       }
     });
   });
 }
 
-// Call this function when you want to display the snapshot, e.g., on popup load:
-document.addEventListener("DOMContentLoaded", () => {
-  showSnapshot();
-  initializeUI();
-});
-
-document.getElementById("starter-btn").addEventListener("click", async () => {
-  const { tabId } = await chrome.runtime.sendMessage({ type: "GET_LAST_TAB" });
-
-  // skip extension pages
-  if (!tabId) {
-    throw new Error("No tab available. Open a webpage before starting.");
-  }
-
-  const starter = document.querySelector(".intro");
-  const extractLoader = document.getElementById("loader-container");
-  const isError = document.getElementById("error");
-  const extractedDOM = document.querySelector(".extracted-DOM");
-  const htmlOutput = document.getElementById("html-output");
-  const cssOutput = document.getElementById("css-output");
-
-  // Reset UI
-  starter.style.display = "none";
-  extractLoader.style.display = "block";
-  isError.style.display = "none";
-  extractedDOM.style.display = "block";
-
-  try {
-    // Inject extraction script into active tab
-    const [{ result }] = await chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      func: extractContent,
-    });
-
-    if (!result) {
-      throw new Error("No result returned from extraction script");
-    }
-
-    const { html, css } = result;
-
-    // Display extracted content
-    htmlOutput.textContent = html.trim();
-    cssOutput.textContent = css.trim();
-
-    // Enable the suggestion button
-    document.getElementById("suggest-btn").onclick = async () => {
-      await handleSuggestions(html, css, extractLoader, extractedDOM);
-      extractedDOM.style.display = "none";
-    };
-  } catch (err) {
-    console.error("Extraction error:", err);
-    isError.style.display = "block";
-    isError.textContent = "Error: " + (err.message || "Unknown error");
-    extractedDOM.style.display = "none";
-  } finally {
-    extractLoader.style.display = "none";
-  }
-});
-
-/**
- * Handles the suggestion flow
- */
-async function handleSuggestions(html, css, extractLoader, extractedDOM) {
-  const suggestContainer = document.querySelector(".suggestions-container");
-  const suggestionsContent = document.querySelector(".suggestions-content");
-  const loaderText = document.querySelector("#loader-text");
-
-  suggestContainer.style.display = "none";
-  extractLoader.style.display = "flex";
-  loaderText.textContent = "Generating AI Suggestions...";
-  extractedDOM.style.display = "none";
-
-  try {
-    const suggestions = await getSuggestionBYGroq(html, css);
-    console.log("Groq raw response:", suggestions);
-
-    // Handle the API response format: { success: true, analysis: "..." }
-    if (suggestions?.success && suggestions?.analysis) {
-      const rawContent = suggestions.analysis;
-      const cleanedResponse = parseAIResponse(rawContent);
-      suggestionsContent.innerHTML = cleanedResponse;
-      suggestContainer.style.display = "block";
-
-      // Initialize copy functionality for suggestion code blocks
-      initializeSuggestionCopyButtons();
-    } else if (suggestions?.error) {
-      suggestionsContent.innerHTML = `
-        <div class="error-message">
-          <h3>🚫 API Error</h3>
-          <p>API Error: ${suggestions.error}</p>
-        </div>`;
-      suggestContainer.style.display = "block";
-    } else {
-      suggestionsContent.innerHTML = `
-        <div class="error-message">
-          <h3>⚠️ Unexpected Response</h3>
-          <p>Received an unexpected response from the AI service. Please try again.</p>
-          <pre style="text-align: left; background: #f5f5f5; padding: 1rem; border-radius: 6px; margin-top: 1rem; overflow: auto;">${JSON.stringify(
-            suggestions,
-            null,
-            2,
-          )}</pre>
-        </div>`;
-      suggestContainer.style.display = "block";
-    }
-  } catch (err) {
-    console.error("Suggestion error:", err.message, err.status, err.response);
-    suggestionsContent.innerHTML = `
-      <div class="error-message">
-        <h3>🔌 Connection Error</h3>
-        <p>Failed to connect to AI service: ${err.message}</p>
-        <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #20c997; color: white; border: none; border-radius: 6px; cursor: pointer;">
-          🔄 Try Again
-        </button>
-      </div>`;
-  } finally {
-    extractLoader.style.display = "none";
-  }
-}
-
-// Initialize copy buttons for suggestion code blocks
 function initializeSuggestionCopyButtons() {
   const suggestionCopyBtns = document.querySelectorAll(".suggestion-copy-btn");
   suggestionCopyBtns.forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const codeBlock = btn.closest(".code-suggestion").querySelector("code");
-
-      if (codeBlock) {
-        try {
-          await navigator.clipboard.writeText(codeBlock.textContent);
-          btn.innerHTML = "✅ Copied!";
-          setTimeout(() => {
-            btn.innerHTML = "📋 Copy Code";
-          }, 2000);
-        } catch (err) {
-          console.error("Failed to copy:", err);
-          btn.innerHTML = "❌ Failed";
-          setTimeout(() => {
-            btn.innerHTML = "📋 Copy Code";
-          }, 2000);
-        }
+      // Try multiple fallbacks to locate the associated <code> block
+      const codeBlock =
+        btn.closest(".code-suggestion")?.querySelector("code") ||
+        btn.closest(".card")?.querySelector("code") ||
+        // fallback: button in header, look for code in sibling card-body
+        btn.parentElement?.nextElementSibling?.querySelector("code") ||
+        // last-resort: search nearby container
+        btn.closest("div")?.querySelector("code");
+      if (!codeBlock) return;
+      try {
+        await navigator.clipboard.writeText(codeBlock.textContent || "");
+        const orig = btn.innerHTML;
+        btn.innerHTML = "✅ Copied!";
+        setTimeout(() => (btn.innerHTML = orig), 1500);
+      } catch (err) {
+        console.error("Failed to copy suggestion code:", err);
+        const orig = btn.innerHTML;
+        btn.innerHTML = "❌ Failed";
+        setTimeout(() => (btn.innerHTML = orig), 1500);
       }
     });
   });
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+  showSnapshot();
+  initializeUI();
+
+  const starterBtn = document.getElementById("starter-btn");
+  if (!starterBtn) return;
+
+  starterBtn.addEventListener("click", async () => {
+    console.log("starter clicked");
+    const { tabId } = await chrome.runtime.sendMessage({
+      type: "GET_LAST_TAB",
+    });
+
+    const starter = document.querySelector(".intro");
+    const extractLoader = document.getElementById("loader-container");
+    const isError = document.getElementById("error");
+    const extractedDOM = document.querySelector(".extracted-DOM");
+    const htmlOutput = document.getElementById("html-output");
+    const cssOutput = document.getElementById("css-output");
+
+    // show loader immediately so user sees progress
+    isError?.classList.add("d-none");
+    starter?.classList.add("d-none");
+    extractLoader?.classList.remove("d-none");
+
+    try {
+      if (!tabId)
+        throw new Error("No active tab found. Open a webpage and try again.");
+
+      const [{ result }] = await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: extractContent,
+      });
+
+      if (!result) throw new Error("No result returned from extraction script");
+
+      const { html, css } = result;
+
+      if (htmlOutput) htmlOutput.textContent = html.trim();
+      if (cssOutput) cssOutput.textContent = css.trim();
+
+      // reveal extracted DOM AFTER content filled
+      extractedDOM?.classList.remove("d-none");
+
+      // wire suggest button once with current html/css
+      const suggestBtn = document.getElementById("suggest-btn");
+      if (suggestBtn) {
+        // ensure single listener
+        suggestBtn.replaceWith(suggestBtn.cloneNode(true));
+        const newSuggest = document.getElementById("suggest-btn");
+        newSuggest?.addEventListener("click", async () => {
+          await handleSuggestions(html, css);
+        });
+      }
+    } catch (err) {
+      console.error("Extraction error:", err);
+      if (isError) {
+        isError.classList.remove("d-none");
+        isError.textContent = "Error: " + (err.message || "Unknown error");
+      }
+      extractedDOM?.classList.add("d-none");
+    } finally {
+      extractLoader?.classList.add("d-none");
+    }
+  });
+});
+
 /**
- * Parses and formats AI response into safe HTML
+ * Handles the suggestion flow (shows spinner, calls API, renders results)
+ */
+async function handleSuggestions(html, css) {
+  const suggestContainer = document.getElementById("suggestions-container");
+  const suggestionsContent = document.getElementById("suggestions-content");
+  const loader = document.getElementById("loader-container");
+  const loaderText = document.getElementById("loader-text");
+  const extractedDOM = document.querySelector(".extracted-DOM");
+
+  if (!suggestContainer || !suggestionsContent || !loader) return;
+
+  // UI: show loader, hide other major sections
+  extractedDOM?.classList.add("d-none");
+  suggestContainer.classList.add("d-none");
+  loader.classList.remove("d-none");
+  if (loaderText) loaderText.textContent = "Generating AI Suggestions...";
+
+  try {
+    const suggestions = await getSuggestionBYGroq(html, css);
+
+    if (suggestions?.success && suggestions?.analysis) {
+      // parse into structured parts and render clean UI
+      const parts = parseAIResponse(suggestions.analysis);
+      renderSuggestionsBlock(
+        parts.analysisHtml,
+        parts.htmlCode,
+        parts.cssCode,
+        parts.implementationHtml,
+      );
+    } else if (suggestions?.error) {
+      suggestionsContent.innerHTML = `<div class="alert alert-danger mb-0">API Error: ${escapeHtml(
+        suggestions.error,
+      )}</div>`;
+    } else {
+      suggestionsContent.innerHTML = `<div class="alert alert-warning mb-0">Unexpected response from AI service.</div>`;
+    }
+
+    // show suggestions
+    suggestContainer.classList.remove("d-none");
+    initializeSuggestionCopyButtons();
+  } catch (err) {
+    console.error("Suggestion error:", err);
+    suggestionsContent.innerHTML = `<div class="alert alert-danger"><strong>Connection Error:</strong> ${escapeHtml(
+      err.message || "Unknown",
+    )}</div>`;
+    suggestContainer.classList.remove("d-none");
+  } finally {
+    loader.classList.add("d-none");
+  }
+}
+
+/**
+ * Parses AI response and returns structured parts:
+ * { analysisHtml, htmlCode, cssCode, implementationHtml }
+ * - analysisHtml: safe HTML for analysis / key issues
+ * - htmlCode / cssCode: raw code strings (not escaped)
+ * - implementationHtml: HTML with implementation notes (safe)
  */
 function parseAIResponse(content) {
-  // Try to extract different sections from the AI response
   const analysisSummaryMatch = content.match(
     /###?\s*\s*\*?\*?ANALYSIS SUMMARY\*?\*?([\s\S]*?)(?=###|$)/i,
   );
@@ -217,83 +233,38 @@ function parseAIResponse(content) {
     /###?\s*\s*\*?\*?IMPLEMENTATION NOTES\*?\*?([\s\S]*?)(?=###|$)/i,
   );
 
-  let output = "";
-
-  // Analysis Summary Section
-  if (analysisSummaryMatch || keyIssuesMatch) {
-    output += `<div class="issues-explanation">`;
-
-    if (analysisSummaryMatch) {
-      output += `
-        <h3>🔍 Analysis Summary</h3>
-        <div class="explanation-content">
-          ${formatMarkdownText(analysisSummaryMatch[1].trim())}
-        </div>`;
-    }
-
-    if (keyIssuesMatch) {
-      output += `
-        <h3>⚠️ Key Issues Identified</h3>
-        <div class="explanation-content">
-          ${formatMarkdownText(keyIssuesMatch[1].trim())}
-        </div>`;
-    }
-
-    output += `</div>`;
+  // Build analysis HTML (safe)
+  let analysisParts = [];
+  if (analysisSummaryMatch) {
+    analysisParts.push(
+      `<h5 class="mb-2">🔍 Analysis Summary</h5><div class="small text-muted">${formatMarkdownText(
+        analysisSummaryMatch[1].trim(),
+      )}</div>`,
+    );
   }
-
-  // Code suggestions
-  const htmlCode = htmlMatch ? htmlMatch[1] : "No HTML suggestions provided";
-  const cssCode = cssMatch ? cssMatch[1] : "No CSS suggestions provided";
-
-  output += `
-    <div class="suggestions-grid">
-      <div class="code-suggestion html-suggestion">
-        <div class="suggestion-header">
-          <h3>📄 HTML Suggestions</h3>
-          <button class="suggestion-copy-btn">📋 Copy Code</button>
-        </div>
-        <div class="html-container">
-          <pre><code class="language-html">${escapeHtml(htmlCode)}</code></pre>
-        </div>
-      </div>
-      
-      <div class="code-suggestion css-suggestion">
-        <div class="suggestion-header">
-          <h3>🎨 CSS Suggestions</h3>
-          <button class="suggestion-copy-btn">📋 Copy Code</button>
-        </div>
-        <div class="css-container">
-          <pre><code class="language-css">${escapeHtml(cssCode)}</code></pre>
-        </div>
-      </div>
-    </div>`;
-
-  // Implementation Notes
-  if (implementationNotesMatch) {
-    output += `
-      <div class="suggestion-footer">
-        <div class="tip-box">
-          <h4>🎯 Implementation Notes</h4>
-          ${formatMarkdownText(implementationNotesMatch[1].trim())}
-        </div>
-      </div>`;
-  } else {
-    output += `
-      <div class="suggestion-footer">
-        <div class="tip-box">
-          <h4>💡 Implementation Tips</h4>
-          <ul>
-            <li>Test changes in a development environment first</li>
-            <li>Ensure accessibility standards are maintained</li>
-            <li>Consider mobile responsiveness for all modifications</li>
-            <li>Validate your HTML and CSS after implementation</li>
-          </ul>
-        </div>
-      </div>`;
+  if (keyIssuesMatch) {
+    analysisParts.push(
+      `<h5 class="mt-3 mb-2">⚠️ Key Issues</h5><div class="small text-muted">${formatMarkdownText(
+        keyIssuesMatch[1].trim(),
+      )}</div>`,
+    );
   }
+  const analysisHtml = analysisParts.length
+    ? analysisParts.join("")
+    : `<p class="small text-muted">No analysis summary provided by the AI.</p>`;
 
-  return output;
+  // Raw code (preserve as text)
+  const htmlCode = htmlMatch ? htmlMatch[1].trim() : "";
+  const cssCode = cssMatch ? cssMatch[1].trim() : "";
+
+  // Implementation notes (safe HTML)
+  const implementationHtml = implementationNotesMatch
+    ? `<h6 class="mb-2">🎯 Implementation Notes</h6><div class="small text-muted">${formatMarkdownText(
+        implementationNotesMatch[1].trim(),
+      )}</div>`
+    : `<h6 class="mb-2">💡 Implementation Tips</h6><div class="small text-muted"><ul><li>Test changes in a development environment</li><li>Verify accessibility and responsiveness</li><li>Use progressive rollouts</li></ul></div>`;
+
+  return { analysisHtml, htmlCode, cssCode, implementationHtml };
 }
 
 /**
@@ -338,17 +309,37 @@ function escapeHtml(text) {
  * Proxy call to Groq API (via your server)
  */
 async function getSuggestionBYGroq(html, css) {
-  const response = await fetch("https://dse-server.vercel.app/api/suggest", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ html, css }),
-  });
+  try {
+    const resp = await fetch("https://dse-server.vercel.app/api/suggest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ html, css }),
+    });
 
-  if (!response.ok) {
-    throw new Error("Groq API request failed: " + response.statusText);
+    // Read response body text to surface errors
+    const text = await resp.text();
+    let payload;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch (e) {
+      payload = text;
+    }
+
+    if (!resp.ok) {
+      console.error("Groq API error:", resp.status, resp.statusText, payload);
+      throw new Error(
+        `Groq API request failed: ${resp.status} ${
+          resp.statusText
+        } — ${JSON.stringify(payload)}`,
+      );
+    }
+
+    return payload;
+  } catch (err) {
+    console.error("Network/API call failed:", err);
+    // Re-throw so UI can show message
+    throw err;
   }
-
-  return response.json();
 }
 
 /**
@@ -387,4 +378,57 @@ function extractContent() {
   }
 
   return { html, css };
+}
+
+function renderSuggestionsBlock(
+  analysisHtml,
+  htmlCode,
+  cssCode,
+  implementationHtml,
+) {
+  const container = document.getElementById("suggestions-content");
+  if (!container) return;
+  container.innerHTML = `
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <div class="card h-100">
+          <div class="card-body">
+            ${analysisHtml}
+            <div class="mt-3">
+              ${implementationHtml}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong class="m-0">HTML Suggestion</strong>
+            <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="html">Copy</button>
+          </div>
+          <div class="card-body p-0">
+            <pre class="mb-0 bg-dark text-white p-3 small" style="max-height:260px;overflow:auto;"><code>${escapeHtml(
+              htmlCode || "No HTML suggestions provided",
+            )}</code></pre>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong class="m-0">CSS Suggestion</strong>
+            <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="css">Copy</button>
+          </div>
+          <div class="card-body p-0">
+            <pre class="mb-0 bg-dark text-white p-3 small" style="max-height:260px;overflow:auto;"><code>${escapeHtml(
+              cssCode || "No CSS suggestions provided",
+            )}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Wire copy buttons for injected content
+  initializeSuggestionCopyButtons();
 }

@@ -1,148 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>DesignSnap Edu</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Custom styles -->
     <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="code.png" type="image/x-icon" />
   </head>
+
   <body>
-    <div class="app-container">
-      <div class="header">
-        <div class="header-content">
-          <img src="code.png" alt="DesignSnap Logo" width="50px" />
-          <div class="header-text">
-            <h1>DesignSnap Edu</h1>
+    <div class="app-container container-fluid p-3">
+      <header class="header mb-3">
+        <div class="d-flex flex-column align-items-center header-content">
+          <img
+            src="code.png"
+            alt="DesignSnap Logo"
+            width="150"
+            height="150"
+            class="mb-1"
+          />
+          <div class="header-text text-center">
+            <h1 class="h5 mb-0">DesignSnap Edu</h1>
             <span class="header-subtitle">UI Enhancement Assistant</span>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div class="intro">
-        <div class="intro-icon">
-          <img src="web-development.png" alt="Web Development" width="100px" />
-        </div>
-        <div class="intro-content">
-          <h2>Welcome to DesignSnap Edu</h2>
-          <p class="intro-desc">
-            This Chrome extension analyzes your website's HTML and CSS to
-            provide intelligent suggestions for better design, improved
-            readability, and enhanced accessibility.
-          </p>
-          <div class="features-list">
-            <div class="feature-item">
-              <span class="feature-icon">🎨</span>
-              <span>Design Analysis</span>
+      <main>
+        <section class="intro card mb-3 shadow-sm">
+          <div class="card-body text-center">
+            <img src="web-development.png" alt="" width="200" class="mb-3" />
+            <h2 class="h1">Welcome to DesignSnap Edu</h2>
+            <p
+              class="intro-desc text-muted mx-auto mb-3"
+              style="max-width: 550px"
+            >
+              Analyze your page's HTML and CSS for practical design,
+              accessibility, and responsiveness improvements.
+            </p>
+
+            <div
+              class="features-list d-flex justify-content-center gap-3 flex-wrap mb-3"
+            >
+              <div class="feature-item badge bg-light text-dark p-2">
+                🎨 Design Analysis
+              </div>
+              <div class="feature-item badge bg-light text-dark p-2">
+                📱 Responsive Suggestions
+              </div>
+              <div class="feature-item badge bg-light text-dark p-2">
+                ♿ Accessibility Tips
+              </div>
             </div>
-            <div class="feature-item">
-              <span class="feature-icon">📱</span>
-              <span>Responsive Suggestions</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-icon">♿</span>
-              <span>Accessibility Tips</span>
-            </div>
-          </div>
-          <button id="starter-btn">
-            <span class="btn-icon">🚀</span>
-            Get Started
-          </button>
-        </div>
-      </div>
 
-      <div id="loader-container" class="loader-section">
-        <div id="extraction-loader"></div>
-        <p id="loader-text">Extracting resources...</p>
-        <div class="loader-steps">
-          <div class="step">Capturing webpage snapshot</div>
-          <div class="step">Analyzing HTML structure</div>
-          <div class="step">Processing CSS styles</div>
-        </div>
-      </div>
-
-      <!-- Error -->
-      <div id="error" class="error-section">
-        <div class="error-icon">⚠️</div>
-        <div class="error-content">
-          <h3>Oops! Something went wrong</h3>
-          <p>There was an error extracting the resources. Please try again.</p>
-        </div>
-      </div>
-
-      <div class="extracted-DOM">
-        <!-- Snapshot Section -->
-        <div class="section-card snapshot-section">
-          <div class="section-header">
-            <h2>📸 Website Snapshot</h2>
-            <p class="section-desc">Current view of your webpage</p>
-          </div>
-          <div id="snapshot-container" class="snapshot-wrapper"></div>
-        </div>
-
-        <!-- Code Analysis Section -->
-        <div class="section-card code-analysis-section">
-          <div class="section-header">
-            <h2>🔍 Code Analysis</h2>
-            <p class="section-desc">Extracted HTML and CSS from your webpage</p>
-          </div>
-
-          <div class="code-tabs">
-            <button class="tab-btn active" data-tab="html">
-              <span class="tab-icon">📄</span>
-              HTML Structure
-            </button>
-            <button class="tab-btn" data-tab="css">
-              <span class="tab-icon">🎨</span>
-              CSS Styles
+            <button id="starter-btn" type="button" class="btn btn-teal px-4">
+              <span class="btn-icon me-2">🚀</span>
+              Get Started
             </button>
           </div>
+        </section>
 
-          <div class="code-content">
-            <div id="html-tab" class="tab-content active">
-              <div class="code-header">
-                <span class="code-language">HTML</span>
-                <button class="copy-btn" data-target="html-output">
-                  📋 Copy
-                </button>
-              </div>
-              <div id="html-container" class="code-container">
-                <pre><code id="html-output"></code></pre>
-              </div>
+        <div
+          id="loader-container"
+          class="loader-section d-none text-center mb-3"
+          role="status"
+          aria-live="polite"
+        >
+          <div
+            id="extraction-loader"
+            class="d-flex justify-content-center mb-2"
+            aria-hidden="true"
+          >
+            <div
+              class="spinner-border text-primary"
+              role="status"
+              style="width: 2rem; height: 2rem"
+            >
+              <span class="visually-hidden">Loading…</span>
             </div>
-
-            <div id="css-tab" class="tab-content">
-              <div class="code-header">
-                <span class="code-language">CSS</span>
-                <button class="copy-btn" data-target="css-output">
-                  📋 Copy
-                </button>
-              </div>
-              <div id="CSS-container" class="code-container">
-                <pre><code id="css-output"></code></pre>
-              </div>
-            </div>
+          </div>
+          <p id="loader-text" class="mb-2 small text-muted">
+            Extracting resources…
+          </p>
+          <div class="loader-steps small text-muted">
+            <div class="step">Capturing webpage snapshot</div>
+            <div class="step">Analyzing HTML structure</div>
+            <div class="step">Processing CSS styles</div>
           </div>
         </div>
 
-        <div class="action-section">
-          <button id="suggest-btn">
-            <span class="btn-icon">🤖</span>
-            Generate AI Suggestions
-            <span class="btn-desc">Get intelligent recommendations</span>
-          </button>
-        </div>
-      </div>
+        <div id="error" class="error-section d-none mb-3"></div>
 
-      <!-- Enhanced Suggestions Container -->
-      <div class="suggestions-container">
-        <div class="suggestions-header">
-          <h2>🎯 AI-Powered Suggestions</h2>
-          <p class="suggestions-desc">
-            Intelligent recommendations to enhance your website
-          </p>
-        </div>
-        <div class="suggestions-content"></div>
-      </div>
+        <section class="extracted-DOM d-none">
+          <article class="section-card card mb-3">
+            <div class="card-header text-center">
+              <h2 class="fw-bold">Website Snapshot</h2>
+              <h6 class="text-muted">Current view of your webpage</h6>
+            </div>
+            <div
+              id="snapshot-container"
+              class="snapshot-wrapper card-body d-flex justify-content-center align-items-center"
+            ></div>
+          </article>
+
+          <article class="section-card card mb-3">
+            <div class="card-header">
+              <h2 class="fw-bold">Code Analysis</h2>
+              <h6 class="text-muted">Extracted HTML and CSS</h6>
+            </div>
+
+            <div class="card-body">
+              <div
+                class="code-tabs btn-group mb-3"
+                role="tablist"
+                aria-label="Code tabs"
+              >
+                <button
+                  class="tab-btn btn btn-outline-secondary active"
+                  data-tab="html"
+                  type="button"
+                >
+                  HTML Structure
+                </button>
+                <button
+                  class="tab-btn btn btn-outline-secondary"
+                  data-tab="css"
+                  type="button"
+                >
+                  CSS Styles
+                </button>
+              </div>
+
+              <div class="code-content">
+                <div id="html-tab" class="tab-content active">
+                  <div
+                    class="code-header d-flex justify-content-between align-items-center mb-0"
+                  >
+                    <span class="code-language small text-uppercase">HTML</span>
+                    <button
+                      class="copy-btn btn btn-sm btn-light"
+                      data-target="html-output"
+                      type="button"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div id="html-container" class="code-container mt-2">
+                    <pre
+                      class="mb-0"
+                    ><code id="html-output" tabindex="0"></code></pre>
+                  </div>
+                </div>
+
+                <div id="css-tab" class="tab-content d-none">
+                  <div
+                    class="code-header d-flex justify-content-between align-items-center mb-0"
+                  >
+                    <span class="code-language small text-uppercase">CSS</span>
+                    <button
+                      class="copy-btn btn btn-sm btn-light"
+                      data-target="css-output"
+                      type="button"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div id="CSS-container" class="code-container mt-2">
+                    <pre
+                      class="mb-0"
+                    ><code id="css-output" tabindex="0"></code></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <div class="action-section text-center mb-3">
+            <button id="suggest-btn" class="btn btn-teal px-4">
+              Generate AI Suggestions
+            </button>
+          </div>
+        </section>
+
+        <aside
+          class="suggestions-container card d-none"
+          id="suggestions-container"
+          aria-hidden="true"
+        >
+          <div class="card-header text-center">
+            <h2 class="fw-bold mb-1">AI-Powered Suggestions</h2>
+            <p class="suggestions-desc small mb-0 text-muted">
+              Practical recommendations to enhance your site
+            </p>
+          </div>
+          <div
+            class="suggestions-content card-body"
+            id="suggestions-content"
+          ></div>
+        </aside>
+      </main>
     </div>
 
     <script src="popup.js"></script>
