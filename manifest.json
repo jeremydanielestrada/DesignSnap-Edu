@@ -2,7 +2,7 @@
   "name": "DesignSnap Edu",
   "description": "AI-powered web enhancement suggestion using Groq",
   "version": "1.0",
-  "permissions": ["scripting", "activeTab", "tabs"],
+  "permissions": ["scripting", "activeTab", "tabs", "windows"],
   "host_permissions": ["<all_urls>"],
   "manifest_version": 3,
   "action": {

@@ -7,14 +7,16 @@ chrome.action.onClicked.addListener(async () => {
   const imageDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
     format: "png",
   });
+
   lastActiveTabId = tab.id; // remember this
   lastCapturedImage = imageDataUrl;
 
   chrome.windows.create({
     url: "popup.html",
     type: "popup",
-    width: 1000,
-    height: 800,
+    // width: 1000,
+    // height: 800,
+    state: "maximized",
     focused: true,
   });
 });
