@@ -357,7 +357,9 @@ function extractContent() {
 
   // Collect CSS rules
   let css = "";
+  let hasStyleSheets = false;
   for (let sheet of document.styleSheets) {
+    hasStyleSheets = true;
     try {
       let count = 0;
       for (let rule of sheet.cssRules) {
@@ -370,6 +372,11 @@ function extractContent() {
     } catch {
       css += `/* Could not access CSS from ${sheet.href} */\n`;
     }
+  }
+
+  // If no CSS found, note that inline styles are used
+  if (!css.trim()) {
+    css = "/* No external CSS detected - this page uses inline styles */";
   }
 
   const MAX_CSS = 3000;
