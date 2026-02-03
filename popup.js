@@ -388,6 +388,24 @@ function renderSuggestionsBlock(
 ) {
   const container = document.getElementById("suggestions-content");
   if (!container) return;
+
+  // Wrap HTML suggestion in boilerplate if it's not empty
+  const boilerplateHtml = htmlCode
+    ? `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suggested Page</title>
+  <style rel="stylesheet">
+  </style>
+</head>
+<body>
+${htmlCode}
+</body>
+</html>`
+    : "No HTML suggestions provided";
+
   container.innerHTML = `
     <div class="row g-3">
       <div class="col-12 col-lg-6">
@@ -404,12 +422,12 @@ function renderSuggestionsBlock(
       <div class="col-12 col-lg-6">
         <div class="card mb-3">
           <div class="card-header d-flex justify-content-between align-items-center">
-            <strong class="m-0">HTML Suggestion</strong>
+            <strong class="m-0">HTML Suggestion (Boilerplate)</strong>
             <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="html">Copy</button>
           </div>
           <div class="card-body p-0">
             <pre class="mb-0 bg-dark text-white p-3 small" style="max-height:260px;overflow:auto;"><code>${escapeHtml(
-              htmlCode || "No HTML suggestions provided",
+              boilerplateHtml,
             )}</code></pre>
           </div>
         </div>
