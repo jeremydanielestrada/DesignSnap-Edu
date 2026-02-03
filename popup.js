@@ -16,7 +16,7 @@ function initializeUI() {
     btn.setAttribute("role", "tab");
     btn.setAttribute(
       "aria-selected",
-      btn.classList.contains("active") ? "true" : "false"
+      btn.classList.contains("active") ? "true" : "false",
     );
 
     btn.addEventListener("click", () => {
@@ -189,11 +189,11 @@ async function handleSuggestions(html, css) {
         parts.analysisHtml,
         parts.htmlCode,
         parts.cssCode,
-        parts.implementationHtml
+        parts.implementationHtml,
       );
     } else if (suggestions?.error) {
       suggestionsContent.innerHTML = `<div class="alert alert-danger mb-0">API Error: ${escapeHtml(
-        suggestions.error
+        suggestions.error,
       )}</div>`;
     } else {
       suggestionsContent.innerHTML = `<div class="alert alert-warning mb-0">Unexpected response from AI service.</div>`;
@@ -205,7 +205,7 @@ async function handleSuggestions(html, css) {
   } catch (err) {
     console.error("Suggestion error:", err);
     suggestionsContent.innerHTML = `<div class="alert alert-danger"><strong>Connection Error:</strong> ${escapeHtml(
-      err.message || "Unknown"
+      err.message || "Unknown",
     )}</div>`;
     suggestContainer.classList.remove("d-none");
   } finally {
@@ -222,15 +222,15 @@ async function handleSuggestions(html, css) {
  */
 function parseAIResponse(content) {
   const analysisSummaryMatch = content.match(
-    /###?\s*\s*\*?\*?ANALYSIS SUMMARY\*?\*?([\s\S]*?)(?=###|$)/i
+    /###?\s*\s*\*?\*?ANALYSIS SUMMARY\*?\*?([\s\S]*?)(?=###|$)/i,
   );
   const keyIssuesMatch = content.match(
-    /###?\s*⚠️\s*\*?\*?KEY ISSUES IDENTIFIED\*?\*?([\s\S]*?)(?=###|$)/i
+    /###?\s*⚠️\s*\*?\*?KEY ISSUES IDENTIFIED\*?\*?([\s\S]*?)(?=###|$)/i,
   );
   const htmlMatch = content.match(/```html\n([\s\S]*?)\n```/);
   const cssMatch = content.match(/```css\n([\s\S]*?)\n```/);
   const implementationNotesMatch = content.match(
-    /###?\s*\s*\*?\*?IMPLEMENTATION NOTES\*?\*?([\s\S]*?)(?=###|$)/i
+    /###?\s*\s*\*?\*?IMPLEMENTATION NOTES\*?\*?([\s\S]*?)(?=###|$)/i,
   );
 
   // Build analysis HTML (safe)
@@ -238,15 +238,15 @@ function parseAIResponse(content) {
   if (analysisSummaryMatch) {
     analysisParts.push(
       `<h5 class="mb-2">🔍 Analysis Summary</h5><div class="small text-muted">${formatMarkdownText(
-        analysisSummaryMatch[1].trim()
-      )}</div>`
+        analysisSummaryMatch[1].trim(),
+      )}</div>`,
     );
   }
   if (keyIssuesMatch) {
     analysisParts.push(
       `<h5 class="mt-3 mb-2">⚠️ Key Issues</h5><div class="small text-muted">${formatMarkdownText(
-        keyIssuesMatch[1].trim()
-      )}</div>`
+        keyIssuesMatch[1].trim(),
+      )}</div>`,
     );
   }
   const analysisHtml = analysisParts.length
@@ -260,7 +260,7 @@ function parseAIResponse(content) {
   // Implementation notes (safe HTML)
   const implementationHtml = implementationNotesMatch
     ? `<h6 class="mb-2">🎯 Implementation Notes</h6><div class="small text-muted">${formatMarkdownText(
-        implementationNotesMatch[1].trim()
+        implementationNotesMatch[1].trim(),
       )}</div>`
     : `<h6 class="mb-2">💡 Implementation Tips</h6><div class="small text-muted"><ul><li>Test changes in a development environment</li><li>Verify accessibility and responsiveness</li><li>Use progressive rollouts</li></ul></div>`;
 
@@ -275,11 +275,11 @@ function formatMarkdownText(text) {
   let formatted = text
     .replace(
       /^\s*-\s+\*\*(.+?):\*\*\s+(.+)$/gm,
-      "<li><strong>$1:</strong> $2</li>"
+      "<li><strong>$1:</strong> $2</li>",
     )
     .replace(
       /^\s*-\s+\*\*(.+?)\*\*\s+(.+)$/gm,
-      "<li><strong>$1</strong> $2</li>"
+      "<li><strong>$1</strong> $2</li>",
     )
     .replace(/^\s*-\s+(.+)$/gm, "<li>$1</li>")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
@@ -330,7 +330,7 @@ async function getSuggestionBYGroq(html, css) {
       throw new Error(
         `Groq API request failed: ${resp.status} ${
           resp.statusText
-        } — ${JSON.stringify(payload)}`
+        } — ${JSON.stringify(payload)}`,
       );
     }
 
@@ -384,7 +384,7 @@ function renderSuggestionsBlock(
   analysisHtml,
   htmlCode,
   cssCode,
-  implementationHtml
+  implementationHtml,
 ) {
   const container = document.getElementById("suggestions-content");
   if (!container) return;
@@ -409,7 +409,7 @@ function renderSuggestionsBlock(
           </div>
           <div class="card-body p-0">
             <pre class="mb-0 bg-dark text-white p-3 small" style="max-height:260px;overflow:auto;"><code>${escapeHtml(
-              htmlCode || "No HTML suggestions provided"
+              htmlCode || "No HTML suggestions provided",
             )}</code></pre>
           </div>
         </div>
@@ -421,7 +421,7 @@ function renderSuggestionsBlock(
           </div>
           <div class="card-body p-0">
             <pre class="mb-0 bg-dark text-white p-3 small" style="max-height:260px;overflow:auto;"><code>${escapeHtml(
-              cssCode || "No CSS suggestions provided"
+              cssCode || "No CSS suggestions provided",
             )}</code></pre>
           </div>
         </div>
@@ -431,4 +431,12 @@ function renderSuggestionsBlock(
 
   // Wire copy buttons for injected content
   initializeSuggestionCopyButtons();
+}
+
+// Close the extension window when clicked
+const closeBtn = document.getElementById("close-extension-btn");
+if (closeBtn) {
+  closeBtn.addEventListener("click", () => {
+    window.close();
+  });
 }
