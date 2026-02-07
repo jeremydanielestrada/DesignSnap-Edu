@@ -1,3 +1,4 @@
+// ------------------- Snapshot -------------------
 async function showSnapshot() {
   const { image } = await chrome.runtime.sendMessage({
     type: "GET_CAPTURED_IMAGE",
@@ -8,6 +9,7 @@ async function showSnapshot() {
   }
 }
 
+// ------------------- UI Initialization -------------------
 function initializeUI() {
   const tabBtns = document.querySelectorAll(".tab-btn");
   const tabContents = document.querySelectorAll(".tab-content");
@@ -66,17 +68,15 @@ function initializeUI() {
   });
 }
 
+// ------------------- Copy buttons for suggestions -------------------
 function initializeSuggestionCopyButtons() {
   const suggestionCopyBtns = document.querySelectorAll(".suggestion-copy-btn");
   suggestionCopyBtns.forEach((btn) => {
     btn.addEventListener("click", async () => {
-      // Try multiple fallbacks to locate the associated <code> block
       const codeBlock =
         btn.closest(".code-suggestion")?.querySelector("code") ||
         btn.closest(".card")?.querySelector("code") ||
-        // fallback: button in header, look for code in sibling card-body
         btn.parentElement?.nextElementSibling?.querySelector("code") ||
-        // last-resort: search nearby container
         btn.closest("div")?.querySelector("code");
       if (!codeBlock) return;
       try {
@@ -94,6 +94,7 @@ function initializeSuggestionCopyButtons() {
   });
 }
 
+// ------------------- DOMContentLoaded -------------------
 document.addEventListener("DOMContentLoaded", () => {
   showSnapshot();
   initializeUI();
@@ -114,7 +115,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const htmlOutput = document.getElementById("html-output");
     const cssOutput = document.getElementById("css-output");
 
-    // show loader immediately so user sees progress
     isError?.classList.add("d-none");
     starter?.classList.add("d-none");
     extractLoader?.classList.remove("d-none");
@@ -123,9 +123,44 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!tabId)
         throw new Error("No active tab found. Open a webpage and try again.");
 
+      // executeScript wrapper for page context
       const [{ result }] = await chrome.scripting.executeScript({
         target: { tabId: tabId },
-        func: extractContent,
+        func: async () => {
+          async function fetchOriginalCSS() {
+            const links = Array.from(
+              document.querySelectorAll('link[rel="stylesheet"]'),
+            );
+            const cssList = [];
+            for (const link of links) {
+              try {
+                const res = await fetch(link.href);
+                if (res.ok) cssList.push(await res.text());
+                else
+                  cssList.push(`/* Could not fetch CSS from ${link.href} */`);
+              } catch {
+                cssList.push(`/* Error fetching CSS from ${link.href} */`);
+              }
+            }
+            return cssList.join("\n\n");
+          }
+
+          async function extractContent() {
+            let html = document.body.innerHTML;
+            if (html.length > 5000)
+              html = html.slice(0, 5000) + "\n<!-- truncated -->";
+
+            let css = await fetchOriginalCSS();
+            if (!css.trim())
+              css = "/* No external CSS detected - page uses inline styles */";
+            if (css.length > 30000)
+              css = css.slice(0, 30000) + "\n/* truncated */";
+
+            return { html, css };
+          }
+
+          return await extractContent();
+        },
       });
 
       if (!result) throw new Error("No result returned from extraction script");
@@ -135,13 +170,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (htmlOutput) htmlOutput.textContent = html.trim();
       if (cssOutput) cssOutput.textContent = css.trim();
 
-      // reveal extracted DOM AFTER content filled
       extractedDOM?.classList.remove("d-none");
 
-      // wire suggest button once with current html/css
       const suggestBtn = document.getElementById("suggest-btn");
       if (suggestBtn) {
-        // ensure single listener
         suggestBtn.replaceWith(suggestBtn.cloneNode(true));
         const newSuggest = document.getElementById("suggest-btn");
         newSuggest?.addEventListener("click", async () => {
@@ -161,41 +193,27 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-/**
- * Animates loader steps sequentially with delays
- */
-function animateLoaderSteps() {
+// ------------------- Loader Animation -------------------
+async function animateLoaderSteps() {
   const steps = document.querySelectorAll(".loader-steps .step");
-  steps.forEach((step) => {
-    step.classList.remove("active", "completed");
-  });
+  steps.forEach((step) => step.classList.remove("active", "completed"));
 
-  let delay = 0;
-  steps.forEach((step, index) => {
-    setTimeout(() => {
-      step.classList.add("active");
-
-      // Mark previous steps as completed
-      if (index > 0) {
-        steps[index - 1].classList.remove("active");
-        steps[index - 1].classList.add("completed");
-      }
-    }, delay);
-    delay += 800; // 800ms delay between each step
-  });
-
-  // Mark the last step as completed after animation finishes
-  setTimeout(() => {
-    if (steps.length > 0) {
-      steps[steps.length - 1].classList.remove("active");
-      steps[steps.length - 1].classList.add("completed");
+  for (let i = 0; i < steps.length; i++) {
+    if (i > 0) {
+      steps[i - 1].classList.remove("active");
+      steps[i - 1].classList.add("completed");
     }
-  }, delay);
+    steps[i].classList.add("active");
+    await new Promise((r) => setTimeout(r, 800));
+  }
+
+  if (steps.length > 0) {
+    steps[steps.length - 1].classList.remove("active");
+    steps[steps.length - 1].classList.add("completed");
+  }
 }
 
-/**
- * Handles the suggestion flow (shows spinner, calls API, renders results)
- */
+// ------------------- Suggestions Flow -------------------
 async function handleSuggestions(html, css) {
   const suggestContainer = document.getElementById("suggestions-container");
   const suggestionsContent = document.getElementById("suggestions-content");
@@ -205,43 +223,38 @@ async function handleSuggestions(html, css) {
 
   if (!suggestContainer || !suggestionsContent || !loader) return;
 
-  // UI: show loader, hide other major sections
   extractedDOM?.classList.add("d-none");
   suggestContainer.classList.add("d-none");
   loader.classList.remove("d-none");
   if (loaderText) loaderText.textContent = "Generating AI Suggestions...";
 
   // Animate loader steps
-  animateLoaderSteps();
+  await animateLoaderSteps();
 
   try {
     const suggestions = await getSuggestionBYGroq(html, css);
 
     if (suggestions?.success && suggestions?.analysis) {
-      // parse into structured parts and render clean UI
       const parts = parseAIResponse(suggestions.analysis);
 
-      // Safety fallback: if AI returns no code
-      if (!parts.htmlCode && !parts.cssCode) {
-        suggestionsContent.innerHTML = `
-          <div class="alert alert-warning">
-            AI response was received, but no code suggestions were generated.
-            Try a different webpage or simpler HTML/CSS.
-          </div>
-        `;
-      } else {
+      if (parts.htmlCode || parts.cssCode) {
         renderSuggestionsBlock(
           parts.analysisHtml,
-          parts.htmlCode,
-          parts.cssCode,
+          parts.htmlCode || "No HTML suggestions provided",
+          parts.cssCode || "No CSS suggestions provided",
           parts.implementationHtml,
         );
+      } else {
+        suggestionsContent.innerHTML = `
+      <div class="alert alert-warning">
+        AI response received, but no code suggestions were generated. 
+        Try a simpler webpage or smaller HTML/CSS.
+      </div>
+    `;
       }
 
-      // Fix 2: ensure suggestions container is visible and accessible
       suggestContainer.classList.remove("d-none");
       suggestContainer.setAttribute("aria-hidden", "false");
-
       initializeSuggestionCopyButtons();
     } else if (suggestions?.error) {
       suggestionsContent.innerHTML = `<div class="alert alert-danger mb-0">API Error: ${escapeHtml(
@@ -266,13 +279,7 @@ async function handleSuggestions(html, css) {
   }
 }
 
-/**
- * Parses AI response and returns structured parts:
- * { analysisHtml, htmlCode, cssCode, implementationHtml }
- * - analysisHtml: safe HTML for analysis / key issues
- * - htmlCode / cssCode: raw code strings (not escaped)
- * - implementationHtml: HTML with implementation notes (safe)
- */
+// ------------------- Parse AI Response -------------------
 function parseAIResponse(content) {
   const getSection = (title) => {
     const regex = new RegExp(`###\\s*[^\\n]*${title}[\\s\\S]*?(?=###|$)`, "i");
@@ -288,10 +295,10 @@ function parseAIResponse(content) {
   const cssMatch = content.match(/```css([\s\S]*?)```/i);
 
   const analysisHtml = `
-    <h5>🧠 What Needs Improvement</h5>
+    <h5>What Needs Improvement</h5>
     <div class="small text-muted">${formatMarkdownText(analysisText)}</div>
 
-    <h5 class="mt-3">❌ Common Beginner Issues</h5>
+    <h5 class="mt-3">Common Beginner Issues</h5>
     <div class="small text-muted">${formatMarkdownText(issuesText)}</div>
   `;
 
@@ -300,7 +307,7 @@ function parseAIResponse(content) {
     htmlCode: htmlMatch ? htmlMatch[1].trim() : "",
     cssCode: cssMatch ? cssMatch[1].trim() : "",
     implementationHtml: `
-      <h6>📘 Why These Changes Help</h6>
+      <h6>Why These Changes Help</h6>
       <div class="small text-muted">
         ${formatMarkdownText(implementationText)}
       </div>
@@ -308,11 +315,8 @@ function parseAIResponse(content) {
   };
 }
 
-/**
- * Formats markdown-style text to HTML
- */
+// ------------------- Markdown Formatter -------------------
 function formatMarkdownText(text) {
-  // Convert markdown lists to HTML
   let formatted = text
     .replace(
       /^\s*-\s+\*\*(.+?):\*\*\s+(.+)$/gm,
@@ -325,30 +329,20 @@ function formatMarkdownText(text) {
     .replace(/^\s*-\s+(.+)$/gm, "<li>$1</li>")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\n\n/g, "</p><p>");
-
-  // Wrap lists in ul tags
   formatted = formatted.replace(/(<li>[\s\S]+?<\/li>)/g, "<ul>$1</ul>");
-
-  // Wrap text in paragraphs if not already in a list
-  if (!formatted.includes("<ul>") && !formatted.includes("<li>")) {
+  if (!formatted.includes("<ul>") && !formatted.includes("<li>"))
     formatted = `<p>${formatted}</p>`;
-  }
-
   return formatted;
 }
 
-/**
- * Escapes text for safe HTML rendering
- */
+// ------------------- Escape HTML -------------------
 function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
 }
 
-/**
- * Proxy call to Groq API (via your server)
- */
+// ------------------- Groq API Proxy -------------------
 async function getSuggestionBYGroq(html, css) {
   try {
     const resp = await fetch("https://dse-server.vercel.app/api/suggest", {
@@ -357,7 +351,6 @@ async function getSuggestionBYGroq(html, css) {
       body: JSON.stringify({ html, css }),
     });
 
-    // Read response body text to surface errors
     const text = await resp.text();
     let payload;
     try {
@@ -366,68 +359,19 @@ async function getSuggestionBYGroq(html, css) {
       payload = text;
     }
 
-    if (!resp.ok) {
-      console.error("Groq API error:", resp.status, resp.statusText, payload);
+    if (!resp.ok)
       throw new Error(
-        `Groq API request failed: ${resp.status} ${
-          resp.statusText
-        } — ${JSON.stringify(payload)}`,
+        `Groq API request failed: ${resp.status} ${resp.statusText} — ${JSON.stringify(payload)}`,
       );
-    }
 
     return payload;
   } catch (err) {
     console.error("Network/API call failed:", err);
-    // Re-throw so UI can show message
     throw err;
   }
 }
 
-/**
- * Content extraction function
- * Runs in the page context
- */
-function extractContent() {
-  let html = document.body.innerHTML;
-
-  // Limit HTML length
-  const MAX_HTML = 5000;
-  if (html.length > MAX_HTML) {
-    html = html.slice(0, MAX_HTML) + "\n<!-- truncated -->";
-  }
-
-  // Collect CSS rules
-  let css = "";
-  let hasStyleSheets = false;
-  for (let sheet of document.styleSheets) {
-    hasStyleSheets = true;
-    try {
-      let count = 0;
-      for (let rule of sheet.cssRules) {
-        css += rule.cssText + "\n";
-        if (++count > 50) {
-          css += "/* truncated */\n";
-          break;
-        }
-      }
-    } catch {
-      css += `/* Could not access CSS from ${sheet.href} */\n`;
-    }
-  }
-
-  // If no CSS found, note that inline styles are used
-  if (!css.trim()) {
-    css = "/* No external CSS detected - this page uses inline styles */";
-  }
-
-  const MAX_CSS = 3000;
-  if (css.length > MAX_CSS) {
-    css = css.slice(0, MAX_CSS) + "\n/* truncated */";
-  }
-
-  return { html, css };
-}
-
+// ------------------- Render Suggestions -------------------
 function renderSuggestionsBlock(
   analysisHtml,
   htmlCode,
@@ -437,7 +381,6 @@ function renderSuggestionsBlock(
   const container = document.getElementById("suggestions-content");
   if (!container) return;
 
-  // Wrap HTML suggestion in boilerplate if it's not empty
   const boilerplateHtml = htmlCode
     ? `<!DOCTYPE html>
 <html lang="en">
@@ -445,8 +388,7 @@ function renderSuggestionsBlock(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Suggested Page</title>
-  <style rel="stylesheet">
-  </style>
+  <style rel="stylesheet"></style>
 </head>
 <body>
 ${htmlCode}
@@ -468,41 +410,37 @@ ${htmlCode}
       </div>
 
       <div class="col-12 col-lg-6">
-        <div class="card mb-3">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <strong class="m-0">HTML Suggestion (Boilerplate)</strong>
-            <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="html">Copy</button>
-          </div>
-          <div class="card-body p-0">
-            <pre class="mb-0 bg-dark text-white p-3 small" style="max-height:260px;overflow:auto;"><code>${escapeHtml(
-              boilerplateHtml,
-            )}</code></pre>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <strong class="m-0">CSS Suggestion</strong>
-            <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="css">Copy</button>
-          </div>
-          <div class="card-body p-0">
-            <pre class="mb-0 bg-dark text-white p-3 small" style="max-height:260px;overflow:auto;"><code>${escapeHtml(
-              cssCode || "No CSS suggestions provided",
-            )}</code></pre>
-          </div>
-        </div>
-      </div>
+  <!-- HTML Suggestion Card -->
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong class="m-0">HTML Suggestion</strong>
+      <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="html">Copy</button>
     </div>
+    <div class="card-body p-0">     
+      <pre class="mb-0 bg-dark text-white p-3 small" style="max-height:600px; overflow:auto;">
+        <code>${escapeHtml(boilerplateHtml)}</code>
+      </pre>
+    </div>
+  </div>
+
+  <!-- CSS Suggestion Card -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong class="m-0">CSS Suggestion</strong>
+      <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="css">Copy</button>
+    </div>
+    <div class="card-body p-0">
+      <pre class="mb-0 bg-dark text-white p-3 small" style="max-height:600px; overflow:auto;">
+        <code>${escapeHtml(cssCode || "No CSS suggestions provided")}</code>
+      </pre>
+    </div>
+  </div>
+</div>
   `;
 
-  // Wire copy buttons for injected content
   initializeSuggestionCopyButtons();
 }
 
-// Close the extension window when clicked
+// ------------------- Close Extension -------------------
 const closeBtn = document.getElementById("close-extension-btn");
-if (closeBtn) {
-  closeBtn.addEventListener("click", () => {
-    window.close();
-  });
-}
+if (closeBtn) closeBtn.addEventListener("click", () => window.close());
