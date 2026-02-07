@@ -41,7 +41,6 @@ body {
   font-weight: 700;
   font-size: 2rem;
   background: linear-gradient(90deg, var(--teal), #22c7b6);
-  -webkit-background-clip: text;
   color: transparent;
 }
 .header-subtitle {
