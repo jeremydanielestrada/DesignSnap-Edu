@@ -220,29 +220,47 @@ async function handleSuggestions(html, css) {
     if (suggestions?.success && suggestions?.analysis) {
       // parse into structured parts and render clean UI
       const parts = parseAIResponse(suggestions.analysis);
-      renderSuggestionsBlock(
-        parts.analysisHtml,
-        parts.htmlCode,
-        parts.cssCode,
-        parts.implementationHtml,
-      );
+
+      // Safety fallback: if AI returns no code
+      if (!parts.htmlCode && !parts.cssCode) {
+        suggestionsContent.innerHTML = `
+          <div class="alert alert-warning">
+            AI response was received, but no code suggestions were generated.
+            Try a different webpage or simpler HTML/CSS.
+          </div>
+        `;
+      } else {
+        renderSuggestionsBlock(
+          parts.analysisHtml,
+          parts.htmlCode,
+          parts.cssCode,
+          parts.implementationHtml,
+        );
+      }
+
+      // Fix 2: ensure suggestions container is visible and accessible
+      suggestContainer.classList.remove("d-none");
+      suggestContainer.setAttribute("aria-hidden", "false");
+
+      initializeSuggestionCopyButtons();
     } else if (suggestions?.error) {
       suggestionsContent.innerHTML = `<div class="alert alert-danger mb-0">API Error: ${escapeHtml(
         suggestions.error,
       )}</div>`;
+      suggestContainer.classList.remove("d-none");
+      suggestContainer.setAttribute("aria-hidden", "false");
     } else {
       suggestionsContent.innerHTML = `<div class="alert alert-warning mb-0">Unexpected response from AI service.</div>`;
+      suggestContainer.classList.remove("d-none");
+      suggestContainer.setAttribute("aria-hidden", "false");
     }
-
-    // show suggestions
-    suggestContainer.classList.remove("d-none");
-    initializeSuggestionCopyButtons();
   } catch (err) {
     console.error("Suggestion error:", err);
     suggestionsContent.innerHTML = `<div class="alert alert-danger"><strong>Connection Error:</strong> ${escapeHtml(
       err.message || "Unknown",
     )}</div>`;
     suggestContainer.classList.remove("d-none");
+    suggestContainer.setAttribute("aria-hidden", "false");
   } finally {
     loader.classList.add("d-none");
   }
@@ -256,50 +274,38 @@ async function handleSuggestions(html, css) {
  * - implementationHtml: HTML with implementation notes (safe)
  */
 function parseAIResponse(content) {
-  const analysisSummaryMatch = content.match(
-    /###?\s*\s*\*?\*?ANALYSIS SUMMARY\*?\*?([\s\S]*?)(?=###|$)/i,
-  );
-  const keyIssuesMatch = content.match(
-    /###?\s*⚠️\s*\*?\*?KEY ISSUES IDENTIFIED\*?\*?([\s\S]*?)(?=###|$)/i,
-  );
-  const htmlMatch = content.match(/```html\n([\s\S]*?)\n```/);
-  const cssMatch = content.match(/```css\n([\s\S]*?)\n```/);
-  const implementationNotesMatch = content.match(
-    /###?\s*\s*\*?\*?IMPLEMENTATION NOTES\*?\*?([\s\S]*?)(?=###|$)/i,
-  );
+  const getSection = (title) => {
+    const regex = new RegExp(`###\\s*[^\\n]*${title}[\\s\\S]*?(?=###|$)`, "i");
+    const match = content.match(regex);
+    return match ? match[0].replace(/###.*\n/, "").trim() : "";
+  };
 
-  // Build analysis HTML (safe)
-  let analysisParts = [];
-  if (analysisSummaryMatch) {
-    analysisParts.push(
-      `<h5 class="mb-2">🔍 Analysis Summary</h5><div class="small text-muted">${formatMarkdownText(
-        analysisSummaryMatch[1].trim(),
-      )}</div>`,
-    );
-  }
-  if (keyIssuesMatch) {
-    analysisParts.push(
-      `<h5 class="mt-3 mb-2">⚠️ Key Issues</h5><div class="small text-muted">${formatMarkdownText(
-        keyIssuesMatch[1].trim(),
-      )}</div>`,
-    );
-  }
-  const analysisHtml = analysisParts.length
-    ? analysisParts.join("")
-    : `<p class="small text-muted">No analysis summary provided by the AI.</p>`;
+  const analysisText = getSection("WHAT NEEDS IMPROVEMENT");
+  const issuesText = getSection("COMMON BEGINNER ISSUES");
+  const implementationText = getSection("WHY THESE CHANGES HELP");
 
-  // Raw code (preserve as text)
-  const htmlCode = htmlMatch ? htmlMatch[1].trim() : "";
-  const cssCode = cssMatch ? cssMatch[1].trim() : "";
+  const htmlMatch = content.match(/```html([\s\S]*?)```/i);
+  const cssMatch = content.match(/```css([\s\S]*?)```/i);
 
-  // Implementation notes (safe HTML)
-  const implementationHtml = implementationNotesMatch
-    ? `<h6 class="mb-2">🎯 Implementation Notes</h6><div class="small text-muted">${formatMarkdownText(
-        implementationNotesMatch[1].trim(),
-      )}</div>`
-    : `<h6 class="mb-2">💡 Implementation Tips</h6><div class="small text-muted"><ul><li>Test changes in a development environment</li><li>Verify accessibility and responsiveness</li><li>Use progressive rollouts</li></ul></div>`;
+  const analysisHtml = `
+    <h5>🧠 What Needs Improvement</h5>
+    <div class="small text-muted">${formatMarkdownText(analysisText)}</div>
 
-  return { analysisHtml, htmlCode, cssCode, implementationHtml };
+    <h5 class="mt-3">❌ Common Beginner Issues</h5>
+    <div class="small text-muted">${formatMarkdownText(issuesText)}</div>
+  `;
+
+  return {
+    analysisHtml,
+    htmlCode: htmlMatch ? htmlMatch[1].trim() : "",
+    cssCode: cssMatch ? cssMatch[1].trim() : "",
+    implementationHtml: `
+      <h6>📘 Why These Changes Help</h6>
+      <div class="small text-muted">
+        ${formatMarkdownText(implementationText)}
+      </div>
+    `,
+  };
 }
 
 /**
