@@ -37,30 +37,48 @@ body {
 }
 
 /* =========================================================
-   Header
+   Header Styling – Logo, App Title, Subtitle
    ========================================================= */
 
 .header {
-  background: linear-gradient(90deg, #0f1724, #111827);
-  color: #ffffff;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 8px;
+  background: linear-gradient(90deg, #111827, #0f1724);
+  border-radius: 12px;
+  padding: 20px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition:
+    background 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
-/* App title gradient */
+.header-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px; /* spacing between logo and text */
+}
+
+.header-logo {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+}
+
 .header-text h1 {
   font-weight: 700;
-  font-size: 2rem;
+  font-size: 1.9rem;
+  letter-spacing: 0.4px;
   background: linear-gradient(90deg, var(--teal), #22c7b6);
   -webkit-background-clip: text;
   color: transparent;
+  margin: 0;
 }
 
-/* Subtitle below title */
 .header-subtitle {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 1rem;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.2px;
 }
 
 .intro .small {
