@@ -278,3 +278,23 @@ body {
 .copy-code-btn.copied {
   background: linear-gradient(90deg, #198754, #20c997);
 }
+
+.suggestion-copy-btn {
+  background: #212529;
+  color: #f8f9fa;
+  border: 1px solid #343a40;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: monospace;
+  opacity: 0.85;
+}
+
+.suggestion-copy-btn:hover {
+  opacity: 1;
+  background: #343a40;
+}
+
+.suggestion-copy-btn:active {
+  transform: scale(0.96);
+}
