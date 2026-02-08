@@ -1,15 +1,22 @@
-/* Minimal custom CSS — Bootstrap handles layout and most visuals.
-   Keep only small overrides and styles relied upon by popup.js.
-*/
+/* =========================================================
+   Global Styles & Variables
+   Bootstrap handles most layout and base styling.
+   This file contains only custom overrides used by popup.js
+   ========================================================= */
 
+/* Google Fonts */
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Roboto+Mono:wght@400;500&display=swap");
 
+/* CSS Variables */
 :root {
   --teal: #20c997;
   --muted: #6c757d;
 }
 
-/* Base */
+/* =========================================================
+   Base Layout
+   ========================================================= */
+
 body {
   font-family:
     "Poppins",
@@ -23,20 +30,25 @@ body {
   padding: 12px;
 }
 
-/* App container */
+/* Main popup container */
 .app-container {
   max-width: 1500px;
   margin: 0 auto;
 }
 
-/* Header */
+/* =========================================================
+   Header
+   ========================================================= */
+
 .header {
   background: linear-gradient(90deg, #0f1724, #111827);
-  color: #fff;
+  color: #ffffff;
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 8px;
 }
+
+/* App title gradient */
 .header-text h1 {
   font-weight: 700;
   font-size: 2rem;
@@ -44,22 +56,44 @@ body {
   -webkit-background-clip: text;
   color: transparent;
 }
+
+/* Subtitle below title */
 .header-subtitle {
   color: rgba(255, 255, 255, 0.85);
   font-size: 1rem;
 }
 
-/* Small components */
+.intro .small {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+/* =========================================================F
+   Buttons & Small Components
+   ========================================================= */
+
+/* Custom teal button */
 .btn-teal {
   background: linear-gradient(90deg, var(--teal), #17a2b8);
-  color: #fff;
+  color: #ffffff;
   border: none;
 }
+
 .btn-teal:hover {
   opacity: 0.95;
 }
 
-/* Keep code display readable */
+.code-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* =========================================================
+   Code Display & Snapshot
+   ========================================================= */
+
+/* Code blocks for HTML/CSS output */
 .code-container pre {
   background: #0f1724;
   color: #e6eef3;
@@ -71,15 +105,19 @@ body {
   max-height: 320px;
 }
 
-/* Snapshot */
+/* Website snapshot container */
 .snapshot-wrapper {
   min-height: 160px;
-  background: #fff;
+  background: #ffffff;
   border-radius: 6px;
   border: 1px dashed rgba(0, 0, 0, 0.06);
 }
 
-/* Loader, error, suggestions visibility controlled by JS — keep hidden by default */
+/* =========================================================
+   Visibility Control (JS-driven)
+   These elements are shown/hidden via popup.js
+   ========================================================= */
+
 .loader-section.d-none,
 .error-section.d-none,
 .extracted-DOM.d-none,
@@ -87,53 +125,138 @@ body {
   display: none !important;
 }
 
-/* Suggestions content basic style */
+/* =========================================================
+   Suggestions Panel
+   ========================================================= */
+
+/* Spacing between suggestion blocks */
 .suggestions-content .code-suggestion {
   margin-bottom: 12px;
 }
 
-/* Suggestions / code blocks */
+/* Suggestion cards */
 .suggestions-content .card {
   border-radius: 10px;
 }
+
+/* Copy button inside suggestion cards */
 .suggestion-copy-btn {
   min-width: 72px;
 }
+
+/* Code blocks inside suggestions */
 .suggestions-content pre {
   font-family: "Roboto Mono", monospace;
   font-size: 0.86rem;
   line-height: 1.35;
 }
-/* Utilities */
+
+/* =========================================================
+   Utility Classes
+   ========================================================= */
+
 .small {
   font-size: 0.85rem;
 }
+
 .text-muted {
   color: var(--muted);
 }
 
-/* Loader Steps Animation */
+/* =========================================================
+   Loader Steps Animation
+   Animated progress text shown during loading
+   ========================================================= */
+
+/* Default (inactive) step */
+/* Loader step – pending / not started yet */
 .loader-steps .step {
-  opacity: 0.4;
-  color: #6c757d; /* muted gray */
-  font-weight: normal;
-  transition:
-    opacity 0.5s,
-    color 0.5s,
-    transform 0.3s;
+  opacity: 0.45;
+  color: #9aa0a6; /* Neutral gray = waiting */
+  font-weight: 400;
   margin-bottom: 4px;
+  transition:
+    opacity 0.4s ease,
+    color 0.4s ease,
+    transform 0.3s ease;
 }
 
+/* Currently active step – processing */
 .loader-steps .step.active {
   opacity: 1;
-  color: #0d6efd; /* Bootstrap primary blue */
+  color: var(--teal); /* Brand teal = working */
   font-weight: 600;
-  transform: translateX(5px);
+  transform: translateX(6px);
 }
 
+/* Completed step – success */
 .loader-steps .step.completed {
-  opacity: 0.7;
-  color: #198754; /* Bootstrap success green */
-  font-weight: normal;
+  opacity: 0.8;
+  color: #198754; /* Success green = done */
+  font-weight: 500;
   transform: translateX(0);
+}
+
+.loader-steps .step.active::before {
+  content: "▶";
+  margin-right: 6px;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* =========================================================
+   Copy Code Button
+   ========================================================= */
+
+.copy-code-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+
+  background: linear-gradient(90deg, var(--teal), #17a2b8);
+  color: #ffffff;
+
+  border: none;
+  border-radius: 999px;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 4px 12px rgba(32, 201, 151, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+
+/* Hover – lift effect */
+.copy-code-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 20px rgba(32, 201, 151, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+/* Active – press feedback */
+.copy-code-btn:active {
+  transform: scale(0.96);
+  box-shadow: 0 4px 10px rgba(32, 201, 151, 0.3);
+}
+
+/* Icon sizing */
+.copy-code-btn .copy-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Success state (JS already changes text) */
+.copy-code-btn.copied {
+  background: linear-gradient(90deg, #198754, #20c997);
 }

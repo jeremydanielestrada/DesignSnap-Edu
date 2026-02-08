@@ -45,42 +45,61 @@
 
       <!-- Main content section -->
       <main>
-        <!-- Introductory card: welcome message and features -->
+        <!-- Introductory card: welcome message and purpose -->
         <section class="intro card mb-3 shadow-sm">
           <div class="card-body text-center">
             <!-- Illustration -->
-            <img src="web-development.png" alt="" width="200" class="mb-3" />
+            <img
+              src="web-development.png"
+              alt="Web development illustration"
+              width="200"
+              class="mb-3"
+            />
+
             <!-- Welcome title -->
-            <h2 class="h1">Welcome to DesignSnap Edu</h2>
+            <h2 class="h1 fw-bold mb-2">DesignSnap Edu</h2>
+
             <!-- Intro description -->
             <p
-              class="intro-desc text-muted mx-auto mb-3"
-              style="max-width: 550px"
+              class="intro-desc text-muted mx-auto mb-4"
+              style="max-width: 580px"
             >
-              Get beginner-friendly feedback on your HTML and CSS. Learn what
-              needs improvement and why, step by step.
+              DesignSnap Edu helps you understand your HTML and CSS better. It
+              analyzes your code and gives clear, beginner-friendly feedback so
+              you know what to improve, how to improve it, and why it matters.
             </p>
 
-            <!-- List of key features -->
+            <!-- Key learning-focused features -->
             <div
-              class="features-list d-flex justify-content-center gap-3 flex-wrap mb-3"
+              class="features-list d-flex justify-content-center gap-3 flex-wrap mb-4"
             >
-              <div class="feature-item badge bg-light text-dark p-2">
-                🎨 Layout & Styling Help
+              <div class="feature-item badge bg-light text-dark p-2 px-3">
+                🧩 Clear structure & layout feedback
               </div>
-              <div class="feature-item badge bg-light text-dark p-2">
-                📱 Beginner-Friendly Suggestions
+              <div class="feature-item badge bg-light text-dark p-2 px-3">
+                🎯 Beginner-friendly explanations
               </div>
-              <div class="feature-item badge bg-light text-dark p-2">
-                📘 Learn Why It Works
+              <div class="feature-item badge bg-light text-dark p-2 px-3">
+                📘 Learn the reasoning behind each suggestion
               </div>
             </div>
 
-            <!-- Get Started button -->
-            <button id="starter-btn" type="button" class="btn btn-teal px-4">
-              <span class="btn-icon me-2">🚀</span>
-              Get Started
+            <!-- Primary call to action -->
+            <button
+              id="starter-btn"
+              type="button"
+              class="btn btn-teal px-5 py-2 mb-2"
+            >
+              Analyze My Page
             </button>
+
+            <!-- Developer credit -->
+            <p class="small text-muted mb-0">
+              Developed by
+              <strong>Jeremy Daniel E. Estrada</strong>,
+              <strong>Vicryl Kez R. Lumanao</strong>, and
+              <strong>Leovin Jozh T. Salarda</strong>
+            </p>
           </div>
         </section>
 
@@ -180,9 +199,10 @@
                     <span class="code-language small text-uppercase">HTML</span>
                     <!-- Copy HTML button -->
                     <button
-                      class="copy-btn btn btn-sm btn-light"
+                      class="copy-btn copy-code-btn"
                       data-target="html-output"
                       type="button"
+                      aria-label="Copy code"
                     >
                       Copy
                     </button>
@@ -203,9 +223,10 @@
                     <span class="code-language small text-uppercase">CSS</span>
                     <!-- Copy CSS button -->
                     <button
-                      class="copy-btn btn btn-sm btn-light"
+                      class="copy-btn copy-code-btn"
                       data-target="css-output"
                       type="button"
+                      aria-label="Copy code"
                     >
                       Copy
                     </button>
