@@ -317,7 +317,18 @@ function parseAIResponse(content) {
 
 // ------------------- Markdown Formatter -------------------
 function formatMarkdownText(text) {
-  let formatted = text
+  // Handle inline code first (before escaping HTML)
+  let formatted = text.replace(/`([^`]+)`/g, (match, code) => {
+    // Escape HTML entities in code
+    const escaped = code
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    return `<code class="bg-light px-1 rounded small">${escaped}</code>`;
+  });
+
+  // Now handle markdown formatting
+  formatted = formatted
     .replace(
       /^\s*-\s+\*\*(.+?):\*\*\s+(.+)$/gm,
       "<li><strong>$1:</strong> $2</li>",
