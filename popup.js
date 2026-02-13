@@ -564,7 +564,7 @@ ${htmlCode}
             </small>
             
             <!-- Conversation History Container -->
-            <div id="conversation-history" class="mt-3"></div>
+            <div id="conversation-history" class="mt-3" style="max-height: 600px; overflow-y: auto;"></div>
           </div>
         </div>
       </div>
@@ -692,7 +692,6 @@ function appendConversationPair(question, answer, isRawHtml = false) {
     <div class="card border-success">
       <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
         <strong>AI Response</strong>
-        <button class="btn btn-sm btn-light conversation-copy-btn">Copy Response</button>
       </div>
       <div class="card-body">
         <div class="response-text">${formattedAnswer}</div>
