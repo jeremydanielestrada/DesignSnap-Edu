@@ -315,6 +315,60 @@ function parseAIResponse(content) {
   };
 }
 
+// ------------------- Enhanced Response Formatter -------------------
+function formatEnhancedResponse(text) {
+  let result = "";
+
+  // Extract code blocks first
+  const codeBlocks = [];
+  let textWithoutCode = text.replace(
+    /```(\w+)?\n([\s\S]*?)```/g,
+    (match, lang, code) => {
+      const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+      codeBlocks.push({ lang: lang || "code", code: code.trim() });
+      return placeholder;
+    },
+  );
+
+  // Extract sections if they exist
+  const sections = textWithoutCode.split(/###\s*(.+?)\n/);
+
+  if (sections.length > 1) {
+    // Has structured sections
+    for (let i = 1; i < sections.length; i += 2) {
+      const title = sections[i].trim();
+      const content = sections[i + 1] ? sections[i + 1].trim() : "";
+
+      if (title && content) {
+        result += `<h6 class="mt-3 mb-2">${escapeHtml(title)}</h6>`;
+        result += `<div class="small">${formatMarkdownText(content)}</div>`;
+      }
+    }
+  } else {
+    // No sections, just format the text
+    result = formatMarkdownText(textWithoutCode);
+  }
+
+  // Re-insert code blocks with proper styling
+  codeBlocks.forEach((block, index) => {
+    const placeholder = `__CODE_BLOCK_${index}__`;
+    const escapedCode = escapeHtml(block.code);
+    const codeHtml = `
+      <div class="card mt-2 mb-2">
+        <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white py-1">
+          <small><strong>${block.lang.toUpperCase()}</strong></small>
+          <button class="btn btn-sm btn-outline-light suggestion-copy-btn" style="font-size:0.75rem; padding:0.1rem 0.4rem;">Copy</button>
+        </div>
+        <div class="card-body p-0">
+          <pre class="mb-0 bg-dark text-white p-2 small" style="max-height:400px; overflow:auto;"><code>${escapedCode}</code></pre>
+        </div>
+      </div>`;
+    result = result.replace(placeholder, codeHtml);
+  });
+
+  return result;
+}
+
 // ------------------- Markdown Formatter -------------------
 function formatMarkdownText(text) {
   // Handle inline code first (before escaping HTML)
@@ -607,7 +661,23 @@ function appendConversationPair(question, answer, isRawHtml = false) {
   const qaWrapper = document.createElement("div");
   qaWrapper.className = "conversation-pair mt-3";
 
-  const formattedAnswer = isRawHtml ? answer : formatMarkdownText(answer);
+  // Parse and format the answer like suggestions
+  let formattedAnswer;
+  if (isRawHtml) {
+    formattedAnswer = answer;
+  } else {
+    // Check if answer contains code blocks or structured sections
+    const hasCodeBlocks = answer.includes("```");
+    const hasSections = /###/i.test(answer);
+
+    if (hasCodeBlocks || hasSections) {
+      // Format like suggestion response
+      formattedAnswer = formatEnhancedResponse(answer);
+    } else {
+      // Simple markdown formatting
+      formattedAnswer = formatMarkdownText(answer);
+    }
+  }
 
   qaWrapper.innerHTML = `
     <div class="card border-primary mb-2">
@@ -630,7 +700,8 @@ function appendConversationPair(question, answer, isRawHtml = false) {
     </div>
   `;
 
-  container.appendChild(qaWrapper);
+  // Prepend instead of append (newest first)
+  container.insertBefore(qaWrapper, container.firstChild);
 
   // Initialize copy button for this response
   const copyBtn = qaWrapper.querySelector(".conversation-copy-btn");
@@ -651,8 +722,11 @@ function appendConversationPair(question, answer, isRawHtml = false) {
     });
   }
 
-  // Scroll to the new Q&A pair
-  qaWrapper.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  // Re-initialize copy buttons for code blocks in the response
+  initializeSuggestionCopyButtons();
+
+  // Scroll to top to show the newest response
+  qaWrapper.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // ------------------- Close Extension -------------------
