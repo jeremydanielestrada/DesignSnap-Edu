@@ -496,6 +496,56 @@ ${htmlCode}
     : "No HTML suggestions provided";
 
   container.innerHTML = `
+    <!-- Before & After Comparison Section with Tabs -->
+    <div class="row g-3 mb-3">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <strong class="m-0">🔍 Before & After Comparison</strong>
+            <div class="btn-group btn-group-sm" role="group">
+              <button type="button" class="btn btn-light preview-tab-btn active" data-preview-tab="before">
+                📸 BEFORE
+              </button>
+              <button type="button" class="btn btn-outline-light preview-tab-btn" data-preview-tab="after">
+                ✨ AFTER
+              </button>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <!-- Before Tab Content -->
+            <div id="before-preview-tab" class="preview-tab-content active">
+              <div class="position-relative" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 3px;">
+                <div class="text-center py-2 px-3" style="background: white;">
+                  <small class="fw-bold text-dark">📸 ORIGINAL (Before AI Improvements)</small>
+                </div>
+                <div id="before-snapshot" style="background: #f8f9fa; min-height: 450px; overflow: hidden;">
+                  <div class="d-flex align-items-center justify-content-center h-100 p-3" style="height:450px;">
+                    <small class="text-muted">Loading snapshot...</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- After Tab Content -->
+            <div id="after-preview-tab" class="preview-tab-content" style="display: none;">
+              <div class="position-relative" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 3px;">
+                <div class="text-center py-2 px-3" style="background: white;">
+                  <small class="fw-bold text-dark">✨ AI IMPROVED (After Suggestions Applied)</small>
+                </div>
+                <div style="background: #fff; overflow: hidden;">
+                  <iframe 
+                    id="ai-preview" 
+                    sandbox="allow-same-origin" 
+                    style="width:100%; height:450px; border:none; display:block;"
+                  ></iframe>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="row g-3">
       <div class="col-12 col-lg-6">
         <div class="card h-100">
@@ -573,6 +623,74 @@ ${htmlCode}
 
   initializeSuggestionCopyButtons();
   initializePromptHandler();
+
+  // Set up before snapshot
+  chrome.runtime
+    .sendMessage({ type: "GET_CAPTURED_IMAGE" })
+    .then(({ image }) => {
+      const beforeContainer = document.getElementById("before-snapshot");
+      if (beforeContainer && image) {
+        beforeContainer.innerHTML = `<img src="${image}" alt="Original Snapshot" style="width:100%; height:450px; object-fit: contain; display:block;" />`;
+      } else if (beforeContainer) {
+        beforeContainer.innerHTML = `<div class="d-flex align-items-center justify-content-center h-100 p-3" style="height:450px;"><small class="text-muted">No snapshot available</small></div>`;
+      }
+    });
+
+  // Set up after preview iframe
+  const previewDoc = `
+<!doctype html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { 
+      margin: 0; 
+      padding: 8px; 
+      min-height: 100%; 
+      overflow: auto;
+    }
+    ${cssCode || ""}
+  </style>
+</head>
+<body>
+  ${htmlCode || "<p>No HTML suggestion</p>"}
+</body>
+</html>
+`;
+
+  const previewIframe = document.getElementById("ai-preview");
+  if (previewIframe) {
+    previewIframe.srcdoc = previewDoc;
+  }
+
+  // Initialize preview tab switching
+  const previewTabBtns = document.querySelectorAll(".preview-tab-btn");
+  previewTabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetTab = btn.getAttribute("data-preview-tab");
+
+      // Remove active class from all buttons
+      previewTabBtns.forEach((b) => {
+        b.classList.remove("active", "btn-light");
+        b.classList.add("btn-outline-light");
+      });
+
+      // Add active class to clicked button
+      btn.classList.remove("btn-outline-light");
+      btn.classList.add("active", "btn-light");
+
+      // Hide all tab contents
+      document
+        .querySelectorAll(".preview-tab-content")
+        .forEach((content) => (content.style.display = "none"));
+
+      // Show target tab content
+      const targetContent = document.getElementById(`${targetTab}-preview-tab`);
+      if (targetContent) {
+        targetContent.style.display = "block";
+      }
+    });
+  });
 }
 
 // ------------------- Prompt Handler -------------------
