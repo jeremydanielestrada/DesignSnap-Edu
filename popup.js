@@ -500,13 +500,13 @@ ${htmlCode}
     <div class="row g-3 mb-3">
       <div class="col-12">
         <div class="card">
-          <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+          <div class="card-header comparison-header d-flex justify-content-between align-items-center">
             <strong class="m-0">🔍 Before & After Comparison</strong>
             <div class="btn-group btn-group-sm" role="group">
-              <button type="button" class="btn btn-light preview-tab-btn active" data-preview-tab="before">
+              <button type="button" class="btn preview-tab-btn active" data-preview-tab="before">
                 📸 BEFORE
               </button>
-              <button type="button" class="btn btn-outline-light preview-tab-btn" data-preview-tab="after">
+              <button type="button" class="btn preview-tab-btn" data-preview-tab="after">
                 ✨ AFTER
               </button>
             </div>
@@ -671,13 +671,11 @@ ${htmlCode}
 
       // Remove active class from all buttons
       previewTabBtns.forEach((b) => {
-        b.classList.remove("active", "btn-light");
-        b.classList.add("btn-outline-light");
+        b.classList.remove("active");
       });
 
       // Add active class to clicked button
-      btn.classList.remove("btn-outline-light");
-      btn.classList.add("active", "btn-light");
+      btn.classList.add("active");
 
       // Hide all tab contents
       document
