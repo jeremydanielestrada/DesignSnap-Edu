@@ -315,9 +315,74 @@ function parseAIResponse(content) {
   };
 }
 
+// ------------------- Enhanced Response Formatter -------------------
+function formatEnhancedResponse(text) {
+  let result = "";
+
+  // Extract code blocks first
+  const codeBlocks = [];
+  let textWithoutCode = text.replace(
+    /```(\w+)?\n([\s\S]*?)```/g,
+    (match, lang, code) => {
+      const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+      codeBlocks.push({ lang: lang || "code", code: code.trim() });
+      return placeholder;
+    },
+  );
+
+  // Extract sections if they exist
+  const sections = textWithoutCode.split(/###\s*(.+?)\n/);
+
+  if (sections.length > 1) {
+    // Has structured sections
+    for (let i = 1; i < sections.length; i += 2) {
+      const title = sections[i].trim();
+      const content = sections[i + 1] ? sections[i + 1].trim() : "";
+
+      if (title && content) {
+        result += `<h6 class="mt-3 mb-2">${escapeHtml(title)}</h6>`;
+        result += `<div class="small">${formatMarkdownText(content)}</div>`;
+      }
+    }
+  } else {
+    // No sections, just format the text
+    result = formatMarkdownText(textWithoutCode);
+  }
+
+  // Re-insert code blocks with proper styling
+  codeBlocks.forEach((block, index) => {
+    const placeholder = `__CODE_BLOCK_${index}__`;
+    const escapedCode = escapeHtml(block.code);
+    const codeHtml = `
+      <div class="card mt-2 mb-2">
+        <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white py-1">
+          <small><strong>${block.lang.toUpperCase()}</strong></small>
+          <button class="btn btn-sm btn-outline-light suggestion-copy-btn" style="font-size:0.75rem; padding:0.1rem 0.4rem;">Copy</button>
+        </div>
+        <div class="card-body p-0">
+          <pre class="mb-0 bg-dark text-white p-2 small" style="max-height:400px; overflow:auto;"><code>${escapedCode}</code></pre>
+        </div>
+      </div>`;
+    result = result.replace(placeholder, codeHtml);
+  });
+
+  return result;
+}
+
 // ------------------- Markdown Formatter -------------------
 function formatMarkdownText(text) {
-  let formatted = text
+  // Handle inline code first (before escaping HTML)
+  let formatted = text.replace(/`([^`]+)`/g, (match, code) => {
+    // Escape HTML entities in code
+    const escaped = code
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    return `<code class="bg-light px-1 rounded small">${escaped}</code>`;
+  });
+
+  // Now handle markdown formatting
+  formatted = formatted
     .replace(
       /^\s*-\s+\*\*(.+?):\*\*\s+(.+)$/gm,
       "<li><strong>$1:</strong> $2</li>",
@@ -343,6 +408,9 @@ function escapeHtml(text) {
 }
 
 // ------------------- Groq API Proxy -------------------
+
+let lastSuggestionContent = null;
+
 async function getSuggestionBYGroq(html, css) {
   try {
     const resp = await fetch("https://dse-server.vercel.app/api/suggest", {
@@ -363,11 +431,42 @@ async function getSuggestionBYGroq(html, css) {
       throw new Error(
         `Groq API request failed: ${resp.status} ${resp.statusText} — ${JSON.stringify(payload)}`,
       );
-
+    lastSuggestionContent = payload;
     return payload;
   } catch (err) {
     console.error("Network/API call failed:", err);
     throw err;
+  }
+}
+
+async function getPromptResponseByGroq(userPrompt) {
+  try {
+    const resp = await fetch("https://dse-server.vercel.app/api/prompt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: userPrompt,
+        content: JSON.stringify(lastSuggestionContent),
+      }),
+    });
+
+    const text = await resp.text();
+    let payload;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch (e) {
+      payload = { error: "Invalid response format" };
+    }
+
+    if (!resp.ok)
+      throw new Error(
+        `API request failed: ${resp.status} ${resp.statusText} — ${JSON.stringify(payload)}`,
+      );
+
+    return payload;
+  } catch (error) {
+    console.error("Prompt API error:", error);
+    throw error;
   }
 }
 
@@ -397,6 +496,56 @@ ${htmlCode}
     : "No HTML suggestions provided";
 
   container.innerHTML = `
+    <!-- Before & After Comparison Section with Tabs -->
+    <div class="row g-3 mb-3">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header comparison-header d-flex justify-content-between align-items-center">
+            <strong class="m-0">🔍 Before & After Comparison</strong>
+            <div class="btn-group btn-group-sm" role="group">
+              <button type="button" class="btn preview-tab-btn active" data-preview-tab="before">
+                📸 BEFORE
+              </button>
+              <button type="button" class="btn preview-tab-btn" data-preview-tab="after">
+                ✨ AFTER
+              </button>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <!-- Before Tab Content -->
+            <div id="before-preview-tab" class="preview-tab-content active">
+              <div class="position-relative" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 3px;">
+                <div class="text-center py-2 px-3" style="background: white;">
+                  <small class="fw-bold text-dark">📸 ORIGINAL (Before AI Improvements)</small>
+                </div>
+                <div id="before-snapshot" style="background: #f8f9fa; min-height: 450px; overflow: hidden;">
+                  <div class="d-flex align-items-center justify-content-center h-100 p-3" style="height:450px;">
+                    <small class="text-muted">Loading snapshot...</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- After Tab Content -->
+            <div id="after-preview-tab" class="preview-tab-content" style="display: none;">
+              <div class="position-relative" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 3px;">
+                <div class="text-center py-2 px-3" style="background: white;">
+                  <small class="fw-bold text-dark">✨ AI IMPROVED (After Suggestions Applied)</small>
+                </div>
+                <div style="background: #fff; overflow: hidden;">
+                  <iframe 
+                    id="ai-preview" 
+                    sandbox="allow-same-origin" 
+                    style="width:100%; height:450px; border:none; display:block;"
+                  ></iframe>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="row g-3">
       <div class="col-12 col-lg-6">
         <div class="card h-100">
@@ -436,9 +585,263 @@ ${htmlCode}
     </div>
   </div>
 </div>
+
+      <!-- Ask Follow-up Question Section -->
+      <div class="col-12 mt-3">
+        <div class="card">
+          <div class="card-header">
+            <strong class="m-0">💬 Ask a Follow-up Question</strong>
+          </div>
+          <div class="card-body">
+            <div class="input-group">
+              <input 
+                type="text" 
+                id="input-prompt" 
+                class="form-control" 
+                placeholder="e.g., How can I make this responsive? Can you explain the flexbox usage?"
+                aria-label="Follow-up question"
+              />
+              <button 
+                class="btn btn-teal" 
+                type="button" 
+                id="prompt-submit-btn"
+              >
+                Ask AI
+              </button>
+            </div>
+            <small class="text-muted d-block mt-2">
+              Ask questions about the suggestions above to learn more!
+            </small>
+            
+            <!-- Conversation History Container -->
+            <div id="conversation-history" class="mt-3" style="max-height: 600px; overflow-y: auto;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   `;
 
   initializeSuggestionCopyButtons();
+  initializePromptHandler();
+
+  // Set up before snapshot
+  chrome.runtime
+    .sendMessage({ type: "GET_CAPTURED_IMAGE" })
+    .then(({ image }) => {
+      const beforeContainer = document.getElementById("before-snapshot");
+      if (beforeContainer && image) {
+        beforeContainer.innerHTML = `<img src="${image}" alt="Original Snapshot" style="width:100%; height:450px; object-fit: contain; display:block;" />`;
+      } else if (beforeContainer) {
+        beforeContainer.innerHTML = `<div class="d-flex align-items-center justify-content-center h-100 p-3" style="height:450px;"><small class="text-muted">No snapshot available</small></div>`;
+      }
+    });
+
+  // Set up after preview iframe
+  const previewDoc = `
+<!doctype html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { 
+      margin: 0; 
+      padding: 8px; 
+      min-height: 100%; 
+      overflow: auto;
+    }
+    ${cssCode || ""}
+  </style>
+</head>
+<body>
+  ${htmlCode || "<p>No HTML suggestion</p>"}
+</body>
+</html>
+`;
+
+  const previewIframe = document.getElementById("ai-preview");
+  if (previewIframe) {
+    previewIframe.srcdoc = previewDoc;
+  }
+
+  // Initialize preview tab switching
+  const previewTabBtns = document.querySelectorAll(".preview-tab-btn");
+  previewTabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetTab = btn.getAttribute("data-preview-tab");
+
+      // Remove active class from all buttons
+      previewTabBtns.forEach((b) => {
+        b.classList.remove("active");
+      });
+
+      // Add active class to clicked button
+      btn.classList.add("active");
+
+      // Hide all tab contents
+      document
+        .querySelectorAll(".preview-tab-content")
+        .forEach((content) => (content.style.display = "none"));
+
+      // Show target tab content
+      const targetContent = document.getElementById(`${targetTab}-preview-tab`);
+      if (targetContent) {
+        targetContent.style.display = "block";
+      }
+    });
+  });
+}
+
+// ------------------- Prompt Handler -------------------
+function initializePromptHandler() {
+  const promptBtn = document.getElementById("prompt-submit-btn");
+  const promptInput = document.getElementById("input-prompt");
+
+  if (!promptBtn || !promptInput) return;
+
+  const handlePromptSubmit = async () => {
+    const userPrompt = promptInput.value.trim();
+
+    if (!userPrompt) {
+      promptInput.focus();
+      return;
+    }
+
+    if (!lastSuggestionContent) {
+      alert(
+        "No previous suggestions found. Please generate suggestions first.",
+      );
+      return;
+    }
+
+    const conversationHistory = document.getElementById("conversation-history");
+    if (!conversationHistory) return;
+
+    // Disable input and button while processing
+    promptBtn.disabled = true;
+    promptInput.disabled = true;
+    const originalBtnText = promptBtn.innerHTML;
+    promptBtn.innerHTML = "Processing...";
+
+    try {
+      const response = await getPromptResponseByGroq(userPrompt);
+
+      if (response?.success && response?.response) {
+        // Append Q&A pair to conversation history
+        appendConversationPair(userPrompt, response.response);
+        promptInput.value = ""; // Clear input
+      } else if (response?.error) {
+        appendConversationPair(
+          userPrompt,
+          `<div class="alert alert-danger mb-0"><strong>Error:</strong> ${escapeHtml(response.error)}</div>`,
+          true,
+        );
+      } else {
+        appendConversationPair(
+          userPrompt,
+          `<div class="alert alert-warning mb-0">Unexpected response from AI service.</div>`,
+          true,
+        );
+      }
+    } catch (err) {
+      console.error("Prompt error:", err);
+      appendConversationPair(
+        userPrompt,
+        `<div class="alert alert-danger mb-0"><strong>Connection Error:</strong> ${escapeHtml(err.message || "Unknown error")}</div>`,
+        true,
+      );
+    } finally {
+      // Re-enable input and button
+      promptBtn.disabled = false;
+      promptInput.disabled = false;
+      promptBtn.innerHTML = originalBtnText;
+      promptInput.focus();
+    }
+  };
+
+  // Button click handler
+  promptBtn.addEventListener("click", handlePromptSubmit);
+
+  // Enter key handler
+  promptInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      handlePromptSubmit();
+    }
+  });
+}
+
+// ------------------- Append Conversation Pair -------------------
+function appendConversationPair(question, answer, isRawHtml = false) {
+  const container = document.getElementById("conversation-history");
+  if (!container) return;
+
+  const qaWrapper = document.createElement("div");
+  qaWrapper.className = "conversation-pair mt-3";
+
+  // Parse and format the answer like suggestions
+  let formattedAnswer;
+  if (isRawHtml) {
+    formattedAnswer = answer;
+  } else {
+    // Check if answer contains code blocks or structured sections
+    const hasCodeBlocks = answer.includes("```");
+    const hasSections = /###/i.test(answer);
+
+    if (hasCodeBlocks || hasSections) {
+      // Format like suggestion response
+      formattedAnswer = formatEnhancedResponse(answer);
+    } else {
+      // Simple markdown formatting
+      formattedAnswer = formatMarkdownText(answer);
+    }
+  }
+
+  qaWrapper.innerHTML = `
+    <div class="card border-primary mb-2">
+      <div class="card-header bg-primary text-white">
+        <strong>Your Question</strong>
+      </div>
+      <div class="card-body">
+        <p class="mb-0">${escapeHtml(question)}</p>
+      </div>
+    </div>
+
+    <div class="card border-success">
+      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <strong>AI Response</strong>
+      </div>
+      <div class="card-body">
+        <div class="response-text">${formattedAnswer}</div>
+      </div>
+    </div>
+  `;
+
+  // Prepend instead of append (newest first)
+  container.insertBefore(qaWrapper, container.firstChild);
+
+  // Initialize copy button for this response
+  const copyBtn = qaWrapper.querySelector(".conversation-copy-btn");
+  if (copyBtn) {
+    copyBtn.addEventListener("click", async () => {
+      try {
+        const textToCopy = isRawHtml ? question : answer;
+        await navigator.clipboard.writeText(textToCopy);
+        const orig = copyBtn.innerHTML;
+        copyBtn.innerHTML = "✅ Copied!";
+        setTimeout(() => (copyBtn.innerHTML = orig), 1500);
+      } catch (err) {
+        console.error("Failed to copy response:", err);
+        const orig = copyBtn.innerHTML;
+        copyBtn.innerHTML = "❌ Failed";
+        setTimeout(() => (copyBtn.innerHTML = orig), 1500);
+      }
+    });
+  }
+
+  // Re-initialize copy buttons for code blocks in the response
+  initializeSuggestionCopyButtons();
+
+  // Scroll to top to show the newest response
+  qaWrapper.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // ------------------- Close Extension -------------------

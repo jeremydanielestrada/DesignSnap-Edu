@@ -298,3 +298,34 @@ body {
 .suggestion-copy-btn:active {
   transform: scale(0.96);
 }
+
+/* =========================================================
+   Before/After Comparison Tabs
+   ========================================================= */
+.comparison-header {
+  background: #d9f7d2;
+  color: #0f5132;
+  border-bottom: 1px solid #b7e5b2;
+}
+
+.preview-tab-btn {
+  border-radius: 999px !important;
+  font-weight: 600;
+  padding: 0.35rem 1.1rem;
+  background: #0f1724;
+  color: #ffffff;
+  border: 1px solid #000000;
+  margin: 0 4px;
+  min-width: 110px;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.preview-tab-btn.active {
+  background: #ffffff;
+  color: #0f1724;
+  border-color: #d9f7d2;
+  box-shadow: 0 0 0 2px rgba(217, 247, 210, 0.8);
+}
