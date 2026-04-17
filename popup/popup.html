@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Meta tags for character set and responsive design -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Page title -->
+    <title>DesignSnap Edu</title>
+
+    <!-- Bootstrap CSS from CDN for styling and layout -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Custom stylesheet for additional styles -->
+    <link rel="stylesheet" href="popup.css" />
+
+    <!-- Favicon for the browser tab -->
+    <link rel="icon" href="../assets/icons/code.png" type="image/x-icon" />
+  </head>
+
+  <body>
+    <!-- Main application container -->
+    <div class="app-container container-fluid p-3">
+      <!-- Header section: logo and app identity -->
+      <header class="header">
+        <div class="header-content">
+          <div class="header-brand">
+            <!-- Logo -->
+            <img
+              src="../assets/icons/code.png"
+              alt="DesignSnap Edu logo"
+              class="header-logo"
+            />
+
+            <!-- App title and subtitle -->
+            <div class="header-text">
+              <h1>DesignSnap Edu</h1>
+              <span class="header-subtitle">
+                Educational UI Enhancement Assistant
+              </span>
+            </div>
+          </div>
+
+          <div class="header-actions">
+            <button
+              id="reset-btn"
+              type="button"
+              class="btn btn-outline-light btn-sm"
+            >
+              Reset
+            </button>
+            <button
+              id="close-extension-btn"
+              type="button"
+              class="btn btn-light btn-sm"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Flow indicator -->
+      <nav class="flow-bar" aria-label="Analysis progress">
+        <ol class="flow-steps">
+          <li class="flow-step is-active" data-step="capture">
+            <span class="flow-step-title">1. Capture</span>
+            <span class="flow-step-desc">Snapshot the page</span>
+          </li>
+          <li class="flow-step" data-step="extract">
+            <span class="flow-step-title">2. Extract</span>
+            <span class="flow-step-desc">HTML + CSS</span>
+          </li>
+          <li class="flow-step" data-step="suggest">
+            <span class="flow-step-title">3. Suggest</span>
+            <span class="flow-step-desc">AI improvements</span>
+          </li>
+        </ol>
+      </nav>
+
+      <!-- Main content section -->
+      <main>
+        <!-- Introductory card: welcome message and purpose -->
+        <section class="intro card mb-3 shadow-sm">
+          <div class="card-body text-center">
+            <!-- Illustration -->
+            <img
+              src="../assets/images/web-development.png"
+              alt="Web development illustration"
+              width="200"
+              class="mb-3"
+            />
+
+            <!-- Welcome title -->
+            <h2 class="h1 fw-bold mb-2">DesignSnap Edu</h2>
+
+            <!-- Intro description -->
+            <p
+              class="intro-desc text-muted mx-auto mb-4"
+              style="max-width: 580px"
+            >
+              DesignSnap Edu helps you understand your HTML and CSS better. It
+              analyzes your code and gives clear, beginner-friendly feedback so
+              you know what to improve, how to improve it, and why it matters.
+            </p>
+
+            <!-- Key learning-focused features -->
+            <div
+              class="features-list d-flex justify-content-center gap-3 flex-wrap mb-4"
+            >
+              <div class="feature-item badge bg-light text-dark p-2 px-3">
+                🧩 Clear structure & layout feedback
+              </div>
+              <div class="feature-item badge bg-light text-dark p-2 px-3">
+                🎯 Beginner-friendly explanations
+              </div>
+              <div class="feature-item badge bg-light text-dark p-2 px-3">
+                📘 Learn the reasoning behind each suggestion
+              </div>
+            </div>
+
+            <!-- Primary call to action -->
+            <button
+              id="starter-btn"
+              type="button"
+              class="btn btn-teal px-5 py-2 mb-2"
+            >
+              Analyze My Page
+            </button>
+
+            <!-- Developer credit -->
+            <p class="small text-muted mb-0">
+              Developed by
+              <strong>Jeremy Daniel E. Estrada</strong>,
+              <strong>Vicryl Kez R. Lumanao</strong>, and
+              <strong>Leovin Jozh T. Salarda</strong>
+            </p>
+          </div>
+        </section>
+
+        <!-- Loader section: shows during webpage analysis -->
+        <div
+          id="loader-container"
+          class="loader-section d-none text-center mb-3"
+          role="status"
+          aria-live="polite"
+        >
+          <!-- Spinner animation -->
+          <div
+            id="extraction-loader"
+            class="d-flex justify-content-center mb-2"
+            aria-hidden="true"
+          >
+            <div
+              class="spinner-border text-primary"
+              role="status"
+              style="width: 2rem; height: 2rem"
+            >
+              <span class="visually-hidden">Loading…</span>
+            </div>
+          </div>
+          <!-- Loading text -->
+          <p id="loader-text" class="mb-2 small text-muted">
+            Extracting resources…
+          </p>
+          <div class="loader-progress mb-2" aria-hidden="true">
+            <div
+              id="loader-progress-bar"
+              class="loader-progress-bar"
+              style="width: 0%"
+            ></div>
+          </div>
+          <!-- Step-by-step progress display -->
+          <div class="loader-steps small text-muted">
+            <div class="step">Initializing resource extraction…</div>
+            <div class="step">Capturing a snapshot of the webpage</div>
+            <div class="step">
+              Scanning HTML structure for elements and attributes
+            </div>
+            <div class="step">Analyzing CSS stylesheets and inline styles</div>
+            <div class="step">Detecting potential layout issues</div>
+            <div class="step">Compiling suggestions for improvement</div>
+            <div class="step">Finalizing extraction and preparing results</div>
+          </div>
+        </div>
+
+        <!-- Error message section -->
+        <div id="error" class="error-section d-none mb-3"></div>
+
+        <!-- Extracted DOM and code analysis section -->
+        <section class="extracted-DOM d-none">
+          <!-- Page context / status -->
+          <article class="section-card card mb-3">
+            <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+              <span class="badge text-bg-light">
+                Page: <span id="page-host" class="fw-semibold">—</span>
+              </span>
+              <span class="badge text-bg-light">
+                Title: <span id="page-title" class="fw-semibold">—</span>
+              </span>
+              <span class="badge text-bg-light">
+                Captured:
+                <time id="captured-at" class="fw-semibold" datetime=""></time>
+              </span>
+            </div>
+          </article>
+
+          <!-- Website snapshot card -->
+          <article class="section-card card mb-3">
+            <div class="card-header text-center">
+              <h2 class="fw-bold">Website Snapshot</h2>
+              <h6 class="text-muted">Current view of your webpage</h6>
+            </div>
+            <div
+              id="snapshot-container"
+              class="snapshot-wrapper card-body d-flex justify-content-center align-items-center"
+            ></div>
+          </article>
+
+          <!-- Code analysis card: HTML and CSS tabs -->
+          <article class="section-card card mb-3">
+            <div class="card-header">
+              <h2 class="fw-bold">Code Analysis</h2>
+              <h6 class="text-muted">Extracted HTML and CSS</h6>
+            </div>
+
+            <div class="card-body">
+              <!-- Tab buttons to switch between HTML and CSS -->
+              <div
+                class="code-tabs btn-group mb-3"
+                role="tablist"
+                aria-label="Code tabs"
+              >
+                <button
+                  id="tab-html"
+                  class="tab-btn btn btn-outline-secondary active"
+                  data-tab="html"
+                  type="button"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="html-tab"
+                >
+                  HTML Structure
+                </button>
+                <button
+                  id="tab-css"
+                  class="tab-btn btn btn-outline-secondary"
+                  data-tab="css"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="css-tab"
+                >
+                  CSS Styles
+                </button>
+              </div>
+
+              <!-- Tab content containers -->
+              <div class="code-content">
+                <!-- HTML code tab -->
+                <div
+                  id="html-tab"
+                  class="tab-content active"
+                  role="tabpanel"
+                  aria-labelledby="tab-html"
+                >
+                  <div
+                    class="code-header d-flex justify-content-between align-items-center mb-0"
+                  >
+                    <span class="code-language small text-uppercase">HTML</span>
+                    <!-- Copy HTML button -->
+                    <button
+                      class="copy-btn copy-code-btn"
+                      data-target="html-output"
+                      type="button"
+                      aria-label="Copy code"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div id="html-container" class="code-container mt-2">
+                    <pre
+                      class="mb-0"
+                      style="max-height: 700px; overflow: auto"
+                    ><code id="html-output" tabindex="0"></code></pre>
+                  </div>
+                </div>
+
+                <!-- CSS code tab -->
+                <div
+                  id="css-tab"
+                  class="tab-content d-none"
+                  role="tabpanel"
+                  aria-labelledby="tab-css"
+                >
+                  <div
+                    class="code-header d-flex justify-content-between align-items-center mb-0"
+                  >
+                    <span class="code-language small text-uppercase">CSS</span>
+                    <!-- Copy CSS button -->
+                    <button
+                      class="copy-btn copy-code-btn"
+                      data-target="css-output"
+                      type="button"
+                      aria-label="Copy code"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div id="CSS-container" class="code-container mt-2">
+                    <pre
+                      class="mb-0"
+                      style="max-height: 700px; overflow: auto"
+                    ><code id="css-output" tabindex="0"></code></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Button to generate AI suggestions -->
+          <div class="action-section text-center mb-3">
+            <button
+              id="suggest-btn"
+              class="btn btn-teal px-4"
+              disabled
+              aria-disabled="true"
+            >
+              Generate AI Suggestions
+            </button>
+            <p class="small text-muted mt-2 mb-0">
+              Tip: click <strong>Analyze My Page</strong> first to extract code.
+            </p>
+          </div>
+        </section>
+
+        <!-- AI-powered suggestions panel -->
+        <aside
+          class="suggestions-container card d-none"
+          id="suggestions-container"
+          aria-hidden="true"
+        >
+          <div class="card-header text-center">
+            <h2 id="suggestions-heading" class="fw-bold mb-1" tabindex="-1">
+              AI-Powered Suggestions
+            </h2>
+            <p class="suggestions-desc small mb-0 text-muted">
+              Simple explanations to help you improve your design
+            </p>
+          </div>
+          <div
+            class="suggestions-content card-body"
+            id="suggestions-content"
+          ></div>
+
+          <div class="text-center mb-3">
+            <button id="back-to-code-btn" class="btn btn-outline-secondary px-4">
+              Back to Code
+            </button>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <!-- Main JavaScript file -->
+    <script src="popup.js"></script>
+  </body>
+</html>
