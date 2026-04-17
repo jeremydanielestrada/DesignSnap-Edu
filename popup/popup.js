@@ -637,13 +637,13 @@ ${htmlCode}
       <div class="col-12">
         <div class="card">
           <div class="card-header comparison-header d-flex justify-content-between align-items-center">
-            <strong class="m-0">🔍 Before & After Comparison</strong>
+            <strong class="m-0">Before & After Comparison</strong>
             <div class="btn-group btn-group-sm" role="group">
               <button type="button" class="btn preview-tab-btn active" data-preview-tab="before">
-                📸 BEFORE
+                BEFORE
               </button>
               <button type="button" class="btn preview-tab-btn" data-preview-tab="after">
-                ✨ AFTER
+                AFTER
               </button>
             </div>
           </div>
@@ -652,7 +652,7 @@ ${htmlCode}
             <div id="before-preview-tab" class="preview-tab-content active">
               <div class="position-relative" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 3px;">
                 <div class="text-center py-2 px-3" style="background: white;">
-                  <small class="fw-bold text-dark">📸 ORIGINAL (Before AI Improvements)</small>
+                  <small class="fw-bold text-dark">ORIGINAL (Before AI Improvements)</small>
                 </div>
                 <div id="before-snapshot" style="background: #f8f9fa; min-height: 450px; overflow: hidden;">
                   <div class="d-flex align-items-center justify-content-center h-100 p-3" style="height:450px;">
@@ -666,7 +666,7 @@ ${htmlCode}
             <div id="after-preview-tab" class="preview-tab-content" style="display: none;">
               <div class="position-relative" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 3px;">
                 <div class="text-center py-2 px-3" style="background: white;">
-                  <small class="fw-bold text-dark">✨ AI IMPROVED (After Suggestions Applied)</small>
+                  <small class="fw-bold text-dark">AI IMPROVED (After Suggestions Applied)</small>
                 </div>
                 <div style="background: #fff; overflow: hidden;">
                   <iframe 
@@ -726,7 +726,7 @@ ${htmlCode}
       <div class="col-12 mt-3">
         <div class="card">
           <div class="card-header">
-            <strong class="m-0">💬 Ask a Follow-up Question</strong>
+            <strong class="m-0">Ask a Follow-up Question</strong>
           </div>
           <div class="card-body">
             <div class="input-group">
