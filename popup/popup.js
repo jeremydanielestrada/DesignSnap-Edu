@@ -1,4 +1,4 @@
-// ------------------- Snapshot -------------------
+﻿// ------------------- Snapshot -------------------
 async function showSnapshot() {
   const { image } = await chrome.runtime.sendMessage({
     type: "GET_CAPTURED_IMAGE",
@@ -12,6 +12,12 @@ async function showSnapshot() {
 let lastExtracted = null;
 let lastExtractionMeta = null;
 let lastErrorContext = null;
+let lastSuggestionParts = null;
+let privacyPrefs = {
+  consent: false,
+  redactForms: true,
+  stripScripts: true,
+};
 
 function setSuggestEnabled(enabled) {
   const suggestBtn = document.getElementById("suggest-btn");
@@ -32,15 +38,33 @@ function setFlowStep(step) {
       el.classList.add("is-complete");
     if (name === step) el.classList.add("is-active");
   });
+
+  const helper = document.getElementById("flow-helper");
+  if (helper) {
+    helper.textContent =
+      step === "capture"
+        ? "Step 1: Capture a snapshot of the current page."
+        : step === "extract"
+          ? "Step 2: Extracting HTML and CSS from the page."
+          : "Step 3: Generating AI suggestions from extracted code.";
+  }
 }
 
 function updatePageContext(meta) {
   const host = document.getElementById("page-host");
   const title = document.getElementById("page-title");
   const capturedAt = document.getElementById("captured-at");
+  const pageUrl = document.getElementById("page-url");
 
   if (host) host.textContent = meta?.host || "—";
   if (title) title.textContent = meta?.title || "—";
+
+  if (pageUrl) {
+    const url = meta?.url || "";
+    pageUrl.href = url || "#";
+    pageUrl.setAttribute("aria-disabled", url ? "false" : "true");
+    pageUrl.classList.toggle("disabled", !url);
+  }
 
   if (capturedAt) {
     const now = new Date();
@@ -75,6 +99,54 @@ function showToast(message, variant = "success") {
   }, 2200);
 }
 
+function setSrStatus(message) {
+  const sr = document.getElementById("sr-status");
+  if (sr) sr.textContent = message || "";
+}
+
+function hasStorage() {
+  return Boolean(globalThis.chrome?.storage?.local);
+}
+
+async function loadPrivacyPrefs() {
+  try {
+    if (!hasStorage()) return;
+    const { dse_privacy } = await chrome.storage.local.get("dse_privacy");
+    if (dse_privacy && typeof dse_privacy === "object") {
+      privacyPrefs = { ...privacyPrefs, ...dse_privacy };
+    }
+  } catch (e) {
+    console.warn("Failed to load privacy prefs", e);
+  }
+}
+
+async function savePrivacyPrefs() {
+  try {
+    if (!hasStorage()) return;
+    await chrome.storage.local.set({ dse_privacy: privacyPrefs });
+  } catch (e) {
+    console.warn("Failed to save privacy prefs", e);
+  }
+}
+
+function applyPrivacyPrefsToUI() {
+  const consent = document.getElementById("privacy-consent");
+  const redact = document.getElementById("redact-forms");
+  const strip = document.getElementById("strip-scripts");
+  if (consent) consent.checked = Boolean(privacyPrefs.consent);
+  if (redact) redact.checked = Boolean(privacyPrefs.redactForms);
+  if (strip) strip.checked = Boolean(privacyPrefs.stripScripts);
+}
+
+function requireConsent() {
+  if (privacyPrefs.consent) return true;
+  showToast("Please accept the privacy consent first.", "danger");
+  document.getElementById("privacy-btn")?.focus();
+  document.getElementById("privacy-modal")?.classList.remove("d-none");
+  document.getElementById("privacy-modal")?.setAttribute("aria-hidden", "false");
+  return false;
+}
+
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes)) return "";
   if (bytes < 1024) return `${bytes} B`;
@@ -103,13 +175,96 @@ function computeTruncationFlags(html, css) {
 function updateCodeTabMeta(html, css) {
   const htmlSize = document.getElementById("html-size");
   const cssSize = document.getElementById("css-size");
+  const payloadHtml = document.getElementById("payload-html");
+  const payloadCss = document.getElementById("payload-css");
   if (htmlSize)
     htmlSize.textContent = html ? `(${formatBytes(html.length)})` : "";
   if (cssSize) cssSize.textContent = css ? `(${formatBytes(css.length)})` : "";
+  if (payloadHtml) payloadHtml.textContent = html ? formatBytes(html.length) : "—";
+  if (payloadCss) payloadCss.textContent = css ? formatBytes(css.length) : "—";
 
   const { htmlTruncated, cssTruncated } = computeTruncationFlags(html, css);
   if (htmlSize && htmlTruncated) htmlSize.textContent += " • truncated";
   if (cssSize && cssTruncated) cssSize.textContent += " • truncated";
+  if (payloadHtml && htmlTruncated) payloadHtml.textContent += " (truncated)";
+  if (payloadCss && cssTruncated) payloadCss.textContent += " (truncated)";
+
+  const notice = document.getElementById("truncation-notice");
+  if (notice) {
+    const show = htmlTruncated || cssTruncated;
+    notice.classList.toggle("d-none", !show);
+    if (show) {
+      notice.innerHTML = `
+        <strong>Note:</strong> Some content was truncated for analysis.
+        <span class="ms-1">This can affect suggestion quality.</span>
+        <div class="small mt-1">
+          HTML truncated: <strong>${htmlTruncated}</strong> • CSS truncated: <strong>${cssTruncated}</strong>
+        </div>
+      `;
+    } else {
+      notice.innerHTML = "";
+    }
+  }
+}
+
+async function saveState() {
+  try {
+    if (!hasStorage()) return;
+    await chrome.storage.local.set({
+      dse_state: {
+        extracted: lastExtracted,
+        meta: lastExtractionMeta,
+        suggestionParts: lastSuggestionParts,
+        savedAt: Date.now(),
+      },
+    });
+  } catch (e) {
+    console.warn("Failed to save state", e);
+  }
+}
+
+async function restoreState() {
+  try {
+    if (!hasStorage()) return;
+    const { dse_state } = await chrome.storage.local.get("dse_state");
+    if (!dse_state) return;
+
+    lastExtracted = dse_state.extracted || null;
+    lastExtractionMeta = dse_state.meta || null;
+    lastSuggestionParts = dse_state.suggestionParts || null;
+
+    const htmlOutput = document.getElementById("html-output");
+    const cssOutput = document.getElementById("css-output");
+    if (lastExtracted?.html && htmlOutput) htmlOutput.textContent = lastExtracted.html.trim();
+    if (lastExtracted?.css && cssOutput) cssOutput.textContent = lastExtracted.css.trim();
+    updateCodeTabMeta(lastExtracted?.html || "", lastExtracted?.css || "");
+    updatePageContext(lastExtractionMeta || { host: "—", title: "—" });
+
+    if (lastExtracted?.html || lastExtracted?.css) {
+      document.querySelector(".intro")?.classList.add("d-none");
+      document.querySelector(".extracted-DOM")?.classList.remove("d-none");
+      setFlowStep("extract");
+      setSuggestEnabled(true);
+    }
+
+    if (lastSuggestionParts) {
+      const suggestContainer = document.getElementById("suggestions-container");
+      const extractedDOM = document.querySelector(".extracted-DOM");
+      renderSuggestionsBlock(
+        lastSuggestionParts.analysisHtml,
+        lastSuggestionParts.htmlCode,
+        lastSuggestionParts.cssCode,
+        lastSuggestionParts.implementationHtml,
+      );
+      suggestContainer?.classList.remove("d-none");
+      suggestContainer?.setAttribute("aria-hidden", "false");
+      extractedDOM?.classList.add("d-none");
+      setFlowStep("suggest");
+      setSrStatus("Suggestions restored.");
+    }
+  } catch (e) {
+    console.warn("Failed to restore state", e);
+  }
 }
 
 function buildDebugReport(context) {
@@ -160,14 +315,27 @@ function humanizeGroqError(err) {
   const status = statusMatch ? Number(statusMatch[1]) : null;
 
   const payload = tryParseJsonFromText(raw);
+  const nestedPayload = tryParseJsonFromText(payload?.error);
   const groqMessage =
     payload?.error?.message ||
     payload?.message ||
     (typeof payload === "string" ? payload : null);
 
   // Rate limit (429)
-  if (status === 429 || payload?.error?.code === "rate_limit_exceeded") {
-    const waitMatch = String(groqMessage || raw).match(
+  const looksLikeRateLimit =
+    status === 429 ||
+    payload?.error?.code === "rate_limit_exceeded" ||
+    nestedPayload?.error?.code === "rate_limit_exceeded" ||
+    raw.includes("429 Too Many Requests") ||
+    raw.includes("rate_limit_exceeded");
+
+  if (looksLikeRateLimit) {
+    const messageSource =
+      nestedPayload?.error?.message ||
+      payload?.error?.message ||
+      groqMessage ||
+      raw;
+    const waitMatch = String(messageSource).match(
       /Please try again in\s+([0-9msh\.\s]+)\.?/i,
     );
     const waitText = waitMatch ? waitMatch[1].trim() : null;
@@ -193,8 +361,9 @@ function humanizeGroqError(err) {
   if (status && status >= 500) {
     return {
       title: "Server error",
-      message:
-        "The AI service is having trouble right now. Please try again in a moment.",
+      message: looksLikeRateLimit
+        ? "The AI service is temporarily rate-limited. Please wait a bit and try again."
+        : "The AI service is having trouble right now. Please try again in a moment.",
     };
   }
 
@@ -363,6 +532,59 @@ document.addEventListener("DOMContentLoaded", () => {
   setFlowStep("capture");
   setSuggestEnabled(false);
 
+  loadPrivacyPrefs().finally(() => {
+    applyPrivacyPrefsToUI();
+  });
+
+  restoreState();
+
+  // Privacy modal (no Bootstrap JS)
+  const privacyBtn = document.getElementById("privacy-btn");
+  const privacyModal = document.getElementById("privacy-modal");
+  const privacyClose = document.getElementById("privacy-close-btn");
+  const closePrivacy = () => {
+    if (!privacyModal) return;
+    privacyModal.classList.add("d-none");
+    privacyModal.setAttribute("aria-hidden", "true");
+    privacyBtn?.focus();
+  };
+  privacyBtn?.addEventListener("click", () => {
+    if (!privacyModal) return;
+    privacyModal.classList.remove("d-none");
+    privacyModal.setAttribute("aria-hidden", "false");
+    privacyClose?.focus();
+  });
+  privacyClose?.addEventListener("click", closePrivacy);
+  privacyModal?.addEventListener("click", (e) => {
+    if (e.target === privacyModal) closePrivacy();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (
+      e.key === "Escape" &&
+      privacyModal &&
+      !privacyModal.classList.contains("d-none")
+    ) {
+      closePrivacy();
+    }
+  });
+
+  // Privacy controls
+  const consent = document.getElementById("privacy-consent");
+  const redact = document.getElementById("redact-forms");
+  const strip = document.getElementById("strip-scripts");
+  consent?.addEventListener("change", () => {
+    privacyPrefs.consent = Boolean(consent.checked);
+    savePrivacyPrefs();
+  });
+  redact?.addEventListener("change", () => {
+    privacyPrefs.redactForms = Boolean(redact.checked);
+    savePrivacyPrefs();
+  });
+  strip?.addEventListener("change", () => {
+    privacyPrefs.stripScripts = Boolean(strip.checked);
+    savePrivacyPrefs();
+  });
+
   const closeBtn = document.getElementById("close-extension-btn");
   if (closeBtn) closeBtn.addEventListener("click", () => window.close());
 
@@ -384,6 +606,7 @@ document.addEventListener("DOMContentLoaded", () => {
     resetBtn.addEventListener("click", () => {
       lastExtracted = null;
       lastExtractionMeta = null;
+      lastSuggestionParts = null;
       setSuggestEnabled(false);
       setFlowStep("capture");
 
@@ -403,6 +626,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       updatePageContext({ host: "—", title: "—" });
       updateCodeTabMeta("", "");
+      document.getElementById("truncation-notice")?.classList.add("d-none");
+      chrome.storage.local.remove("dse_state").catch(() => {});
       document.getElementById("starter-btn")?.focus();
     });
   }
@@ -411,16 +636,63 @@ document.addEventListener("DOMContentLoaded", () => {
   if (suggestBtn) {
     suggestBtn.addEventListener("click", async () => {
       if (!lastExtracted) return;
+      if (!requireConsent()) return;
       await handleSuggestions(lastExtracted.html, lastExtracted.css);
     });
   }
+
+  // Clickable stepper navigation
+  document.querySelectorAll(".flow-step").forEach((el) => {
+    el.setAttribute("role", "button");
+    el.setAttribute("tabindex", "0");
+    const go = () => {
+      const step = el.getAttribute("data-step");
+      if (step === "capture") {
+        document.querySelector(".intro")?.classList.remove("d-none");
+        document.querySelector(".extracted-DOM")?.classList.add("d-none");
+        document.getElementById("suggestions-container")?.classList.add("d-none");
+        setFlowStep("capture");
+        document.getElementById("starter-btn")?.focus();
+        return;
+      }
+
+      if (step === "extract") {
+        document.querySelector(".intro")?.classList.add("d-none");
+        document.querySelector(".extracted-DOM")?.classList.remove("d-none");
+        document.getElementById("suggestions-container")?.classList.add("d-none");
+        setFlowStep("extract");
+        document.getElementById("suggest-btn")?.focus();
+        return;
+      }
+
+      if (step === "suggest") {
+        if (!lastSuggestionParts) return;
+        document.querySelector(".intro")?.classList.add("d-none");
+        document.querySelector(".extracted-DOM")?.classList.add("d-none");
+        const suggestContainer = document.getElementById("suggestions-container");
+        suggestContainer?.classList.remove("d-none");
+        suggestContainer?.setAttribute("aria-hidden", "false");
+        setFlowStep("suggest");
+        document.getElementById("suggestions-heading")?.focus();
+      }
+    };
+    el.addEventListener("click", go);
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        go();
+      }
+    });
+  });
 
   const starterBtn = document.getElementById("starter-btn");
   if (!starterBtn) return;
 
   starterBtn.addEventListener("click", async () => {
+    if (!requireConsent()) return;
     console.log("starter clicked");
-    const { tabId } = await chrome.runtime.sendMessage({
+    const { tabId, url: tabUrl, title: tabTitle } =
+      await chrome.runtime.sendMessage({
       type: "GET_LAST_TAB",
     });
 
@@ -443,10 +715,62 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!tabId)
         throw new Error("No active tab found. Open a webpage and try again.");
 
+      const isHttp = typeof tabUrl === "string" && /^https?:\/\//i.test(tabUrl);
+      if (!isHttp) {
+        throw new Error(
+          "This page can't be analyzed. Open a normal website (http/https) and try again (some pages like chrome://, extension pages, and the Web Store are restricted).",
+        );
+      }
+
+      // Capture context early so Debug Report shows the actual page even if extraction fails.
+      try {
+        const u = new URL(tabUrl);
+        lastExtractionMeta = {
+          url: tabUrl,
+          title: tabTitle || document.title || "",
+          host: u.hostname || "",
+        };
+        updatePageContext(lastExtractionMeta);
+      } catch {
+        lastExtractionMeta = {
+          url: tabUrl || "",
+          title: tabTitle || document.title || "",
+          host: "",
+        };
+        updatePageContext(lastExtractionMeta);
+      }
+
       // executeScript wrapper for page context
-      const [{ result }] = await chrome.scripting.executeScript({
+      const injectionResults = await chrome.scripting.executeScript({
         target: { tabId: tabId },
-        func: async () => {
+        args: [privacyPrefs],
+        func: async (prefs) => {
+          const safePrefs = prefs && typeof prefs === "object" ? prefs : {};
+
+          function sanitizeDocumentBodyHtml() {
+            // Clone only the body to reduce memory/DOM edge cases.
+            const bodyClone = document.body
+              ? document.body.cloneNode(true)
+              : null;
+
+            if (!bodyClone) return document.body?.innerHTML || "";
+
+            if (safePrefs.stripScripts) {
+              bodyClone.querySelectorAll("script").forEach((el) => el.remove());
+            }
+
+            if (safePrefs.redactForms) {
+              bodyClone.querySelectorAll("input, textarea").forEach((el) => {
+                try {
+                  el.setAttribute("value", "");
+                  if (el.tagName === "TEXTAREA") el.textContent = "";
+                } catch {}
+              });
+            }
+
+            return bodyClone.innerHTML;
+          }
+
           async function fetchOriginalCSS() {
             const links = Array.from(
               document.querySelectorAll('link[rel="stylesheet"]'),
@@ -466,7 +790,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
 
           async function extractContent() {
-            let html = document.body.innerHTML;
+            let html = sanitizeDocumentBodyHtml();
             if (html.length > 5000)
               html = html.slice(0, 5000) + "\n<!-- truncated -->";
 
@@ -489,11 +813,34 @@ document.addEventListener("DOMContentLoaded", () => {
         },
       });
 
-      if (!result) throw new Error("No result returned from extraction script");
+      if (!injectionResults || injectionResults.length === 0) {
+        throw new Error(
+          "Could not run extraction on this tab. Make sure you're on a normal website (http/https), then reload and try again.",
+        );
+      }
+
+      const result = injectionResults?.[0]?.result;
+      const injectionError = injectionResults?.[0]?.error;
+      if (injectionError) {
+        const msg =
+          injectionError?.message ||
+          injectionError?.toString?.() ||
+          "Unknown page injection error";
+        throw new Error(
+          `Extraction script failed inside the page.\n\nDetected URL: ${tabUrl}\n\nDetails: ${msg}`,
+        );
+      }
+      if (!result) {
+        throw new Error(
+          `Extraction did not return any content. This can happen on restricted pages or if the tab changed—reload the page and click Analyze again.\n\nDetected URL: ${tabUrl}`,
+        );
+      }
 
       const { html, css } = result;
       lastExtracted = { html, css };
-      lastExtractionMeta = result.meta || null;
+      lastExtractionMeta =
+        result.meta ||
+        lastExtractionMeta || { url: tabUrl || "", title: tabTitle || "" };
 
       if (htmlOutput) htmlOutput.textContent = html.trim();
       if (cssOutput) cssOutput.textContent = css.trim();
@@ -503,6 +850,9 @@ document.addEventListener("DOMContentLoaded", () => {
       setSuggestEnabled(true);
       updatePageContext(result.meta);
       htmlOutput?.focus();
+      setSrStatus("Extraction complete. You can now generate AI suggestions.");
+      saveState();
+      document.getElementById("suggest-btn")?.scrollIntoView({ behavior: "smooth", block: "center" });
 
       const suggestContainer = document.getElementById("suggestions-container");
       suggestContainer?.classList.add("d-none");
@@ -524,6 +874,23 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Code tools
+  const wrapToggle = document.getElementById("wrap-toggle");
+  const fontSize = document.getElementById("font-size");
+  const applyCodePrefs = () => {
+    const htmlPre = document.querySelector("#html-container .code-pre");
+    const cssPre = document.querySelector("#CSS-container .code-pre");
+    const wrap = Boolean(wrapToggle?.checked);
+    const size = fontSize ? Number(fontSize.value) : 14;
+    [htmlPre, cssPre].forEach((pre) => {
+      if (!pre) return;
+      pre.classList.toggle("is-wrapped", wrap);
+      pre.style.fontSize = `${size}px`;
+    });
+  };
+  wrapToggle?.addEventListener("change", applyCodePrefs);
+  fontSize?.addEventListener("input", applyCodePrefs);
+  applyCodePrefs();
+
   document
     .getElementById("copy-all-btn")
     ?.addEventListener("click", async () => {
@@ -539,6 +906,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+  // Legacy single download button (removed from UI)
   document.getElementById("download-btn")?.addEventListener("click", () => {
     if (!lastExtracted) return;
     const { htmlTruncated, cssTruncated } = computeTruncationFlags(
@@ -576,6 +944,91 @@ document.addEventListener("DOMContentLoaded", () => {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  });
+
+  const downloadText = (filename, content, mime) => {
+    const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadMd = () => {
+    if (!lastExtracted) return;
+    const { htmlTruncated, cssTruncated } = computeTruncationFlags(
+      lastExtracted.html,
+      lastExtracted.css,
+    );
+
+    const md = [
+      "# DesignSnap Edu Export",
+      "",
+      `- URL: ${lastExtractionMeta?.url || "—"}`,
+      `- Title: ${lastExtractionMeta?.title || "—"}`,
+      `- Captured: ${new Date().toLocaleString()}`,
+      `- HTML truncated: ${htmlTruncated}`,
+      `- CSS truncated: ${cssTruncated}`,
+      "",
+      "## HTML",
+      "```html",
+      lastExtracted.html || "",
+      "```",
+      "",
+      "## CSS",
+      "```css",
+      lastExtracted.css || "",
+      "```",
+      "",
+    ].join("\n");
+
+    // If we have suggestions, attach them to the report export
+    const report = lastSuggestionParts
+      ? [
+          md,
+          "## AI Suggestions",
+          "",
+          "### Summary",
+          lastSuggestionParts.analysisText || "",
+          "",
+          "### Implementation Notes",
+          lastSuggestionParts.implementationText || "",
+          "",
+          "### Suggested HTML",
+          "```html",
+          lastSuggestionParts.htmlCode || "",
+          "```",
+          "",
+          "### Suggested CSS",
+          "```css",
+          lastSuggestionParts.cssCode || "",
+          "```",
+          "",
+        ].join("\n")
+      : md;
+
+    downloadText("designsnap-export.md", report, "text/markdown");
+  };
+
+  document.getElementById("download-md-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    downloadMd();
+  });
+
+  document.getElementById("download-html-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (!lastExtracted) return;
+    downloadText("designsnap.html", lastExtracted.html || "", "text/html");
+  });
+
+  document.getElementById("download-css-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (!lastExtracted) return;
+    downloadText("designsnap.css", lastExtracted.css || "", "text/css");
   });
 });
 
@@ -633,6 +1086,8 @@ async function handleSuggestions(html, css) {
         ? parseAIParsedResponse(suggestions.parsed)
         : parseAIResponse(suggestions.analysis);
 
+      lastSuggestionParts = parts;
+
       if (parts.htmlCode || parts.cssCode) {
         renderSuggestionsBlock(
           parts.analysisHtml,
@@ -652,6 +1107,8 @@ async function handleSuggestions(html, css) {
       suggestContainer.classList.remove("d-none");
       suggestContainer.setAttribute("aria-hidden", "false");
       initializeSuggestionCopyButtons();
+      setSrStatus("Suggestions are ready.");
+      saveState();
     } else if (suggestions?.error) {
       suggestionsContent.innerHTML = `<div class="alert alert-danger mb-0">API Error: ${escapeHtml(
         suggestions.error,
@@ -703,6 +1160,8 @@ function parseAIParsedResponse(parsed) {
 
   return {
     analysisHtml,
+    analysisText: `What Needs Improvement\n${summaryText}\n\nCommon Beginner Issues\n${issuesText}`,
+    implementationText: whyText,
     htmlCode: parsed?.improved_html || "",
     cssCode: parsed?.improved_css || "",
     implementationHtml,
@@ -733,6 +1192,8 @@ function parseAIResponse(content) {
 
   return {
     analysisHtml,
+    analysisText: `What Needs Improvement\n${analysisText}\n\nCommon Beginner Issues\n${issuesText}`,
+    implementationText,
     htmlCode: htmlMatch ? htmlMatch[1].trim() : "",
     cssCode: cssMatch ? cssMatch[1].trim() : "",
     implementationHtml: `
@@ -971,7 +1432,7 @@ ${htmlCode}
     <!-- Summary -->
     <div class="row g-3 mb-3">
       <div class="col-12">
-        <div class="card">
+        <div class="card" id="sec-summary">
           <div class="card-header d-flex justify-content-between align-items-center">
             <strong class="m-0">Summary</strong>
             <span class="badge text-bg-light">Key findings</span>
@@ -986,7 +1447,7 @@ ${htmlCode}
     <!-- Preview + Explanation -->
     <div class="row g-3 mb-3">
       <div class="col-12 col-lg-7">
-        <div class="card h-100 preview-card">
+        <div class="card h-100 preview-card" id="sec-preview">
           <div class="card-header preview-header d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div class="d-flex flex-column">
               <strong class="m-0">Before & After</strong>
@@ -1034,7 +1495,7 @@ ${htmlCode}
       </div>
 
       <div class="col-12 col-lg-5">
-        <div class="card h-100">
+        <div class="card h-100" id="sec-explain">
           <div class="card-header">
             <strong class="m-0">Why These Changes Help</strong>
           </div>
@@ -1048,7 +1509,7 @@ ${htmlCode}
     <!-- Code Suggestions -->
     <div class="row g-3 mb-3">
       <div class="col-12 col-lg-6">
-        <div class="card h-100">
+        <div class="card h-100" id="sec-code-html">
           <div class="card-header d-flex justify-content-between align-items-center">
             <strong class="m-0">HTML Suggestion</strong>
             <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="html">Copy</button>
@@ -1062,7 +1523,7 @@ ${htmlCode}
       </div>
 
       <div class="col-12 col-lg-6">
-        <div class="card h-100">
+        <div class="card h-100" id="sec-code-css">
           <div class="card-header d-flex justify-content-between align-items-center">
             <strong class="m-0">CSS Suggestion</strong>
             <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="css">Copy</button>
@@ -1079,7 +1540,7 @@ ${htmlCode}
     <!-- Follow-up -->
     <div class="row g-3">
       <div class="col-12">
-        <div class="card">
+        <div class="card" id="sec-followup">
           <div class="card-header">
             <strong class="m-0">Ask a Follow-up Question</strong>
           </div>
@@ -1113,6 +1574,28 @@ ${htmlCode}
   initializeSuggestionCopyButtons();
   initializePromptHandler();
   enhanceSuggestionsUI();
+
+  // Suggestions mini-nav (sticky)
+  const nav = document.getElementById("suggestions-nav");
+  if (nav) {
+    nav.classList.remove("d-none");
+    nav.innerHTML = `
+      <a href="#sec-summary" class="suggestions-nav-link">Summary</a>
+      <a href="#sec-preview" class="suggestions-nav-link">Preview</a>
+      <a href="#sec-code-html" class="suggestions-nav-link">HTML</a>
+      <a href="#sec-code-css" class="suggestions-nav-link">CSS</a>
+      <a href="#sec-followup" class="suggestions-nav-link">Follow-up</a>
+    `;
+
+    nav.querySelectorAll("a").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        const id = a.getAttribute("href")?.slice(1);
+        const target = id ? document.getElementById(id) : null;
+        target?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  }
 
   // Set up before snapshot
   chrome.runtime
@@ -1178,6 +1661,21 @@ ${htmlCode}
         targetContent.style.display = "block";
       }
     });
+
+    // Keyboard navigation (Left/Right) between tabs
+    btn.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      const tabs = Array.from(document.querySelectorAll(".preview-tab-btn"));
+      const idx = tabs.indexOf(btn);
+      if (idx < 0) return;
+      const nextIdx =
+        e.key === "ArrowRight"
+          ? (idx + 1) % tabs.length
+          : (idx - 1 + tabs.length) % tabs.length;
+      tabs[nextIdx]?.focus();
+      tabs[nextIdx]?.click();
+    });
   });
 }
 
@@ -1189,6 +1687,7 @@ function initializePromptHandler() {
   if (!promptBtn || !promptInput) return;
 
   const handlePromptSubmit = async () => {
+    if (!requireConsent()) return;
     const userPrompt = promptInput.value.trim();
 
     if (!userPrompt) {

@@ -135,6 +135,77 @@ body {
   margin-bottom: 0.75rem !important;
 }
 
+.feature-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.intro #privacy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  text-decoration: none;
+  background: rgba(248, 249, 250, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.intro #privacy-btn:hover {
+  background: #ffffff;
+  border-color: rgba(32, 201, 151, 0.35);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.intro #privacy-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
+}
+
+.intro #privacy-btn::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #20c997, #0d6efd);
+  box-shadow: 0 6px 14px rgba(32, 201, 151, 0.3);
+}
+
+.intro .privacy-controls {
+  max-width: 520px;
+  margin-inline: auto;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(248, 249, 250, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.intro .privacy-controls .form-check-input:checked {
+  background-color: var(--teal);
+  border-color: var(--teal);
+}
+
+.feature-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  opacity: 0.9;
+}
+
+.privacy-controls {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* =========================================================F
    Buttons & Small Components
    ========================================================= */
@@ -176,6 +247,11 @@ body {
   margin: 0 0 12px 0;
 }
 
+.flow-helper {
+  margin-top: 8px;
+  text-align: center;
+}
+
 .flow-steps {
   list-style: none;
   margin: 0;
@@ -191,6 +267,7 @@ body {
   background: #f6f7f9;
   border: 1px solid rgba(0, 0, 0, 0.06);
   opacity: 0.8;
+  cursor: pointer;
 }
 
 .flow-step-title {
@@ -216,6 +293,16 @@ body {
   opacity: 1;
   background: rgba(25, 135, 84, 0.08);
   border-color: rgba(25, 135, 84, 0.25);
+}
+
+.flow-step.is-complete .flow-step-title::before {
+  content: "✓ ";
+  color: #198754;
+}
+
+.flow-step:focus-visible {
+  outline: 3px solid rgba(32, 201, 151, 0.55);
+  outline-offset: 2px;
 }
 
 /* =========================================================
@@ -280,6 +367,35 @@ body {
   line-height: 1.35;
 }
 
+.suggestions-nav {
+  position: sticky;
+  top: 10px;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+.suggestions-nav-link {
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #111827;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(17, 24, 39, 0.04);
+}
+
+.suggestions-nav-link:hover {
+  background: rgba(32, 201, 151, 0.12);
+  border-color: rgba(32, 201, 151, 0.35);
+}
+
 /* =========================================================
    Utility Classes
    ========================================================= */
@@ -338,6 +454,21 @@ body {
   overflow: auto;
 }
 
+.code-pre.is-wrapped code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.code-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.code-toggle input[type="range"] {
+  width: 120px;
+}
+
 /* Sticky page context pills */
 .extracted-DOM .section-card:first-child {
   position: sticky;
@@ -373,6 +504,139 @@ body {
 .loader-details summary {
   cursor: pointer;
   user-select: none;
+}
+
+/* Download menu */
+.download-menu {
+  position: relative;
+}
+
+.download-menu > summary {
+  list-style: none;
+}
+
+.download-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.download-menu[open] .download-menu-items {
+  display: flex;
+}
+
+.download-menu-items {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+  z-index: 30;
+  min-width: 180px;
+}
+
+/* Disabled link badge */
+.badge.disabled {
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+/* Focus visibility */
+button:focus-visible,
+summary:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgba(32, 201, 151, 0.55);
+  outline-offset: 2px;
+}
+
+/* Simple modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(
+      1200px 800px at 50% 0%,
+      rgba(32, 201, 151, 0.18),
+      transparent 60%
+    ),
+    rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 9998;
+}
+
+.modal-card {
+  width: min(640px, 100%);
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow:
+    0 22px 65px rgba(0, 0, 0, 0.35),
+    0 2px 0 rgba(255, 255, 255, 0.4) inset;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transform: translateY(6px) scale(0.99);
+  opacity: 0;
+  animation: modal-in 140ms ease-out forwards;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background:
+    radial-gradient(
+      900px 300px at 0% 0%,
+      rgba(32, 201, 151, 0.22),
+      transparent 70%
+    ),
+    linear-gradient(180deg, rgba(248, 249, 250, 1), rgba(255, 255, 255, 1));
+}
+
+.modal-header strong {
+  font-size: 0.95rem;
+  letter-spacing: 0.2px;
+}
+
+.modal-body {
+  padding: 14px 16px 16px;
+  color: #212529;
+}
+
+.modal-body p {
+  line-height: 1.5;
+}
+
+.modal-body hr {
+  opacity: 0.12;
+}
+
+.modal-body ul {
+  padding-left: 1.1rem;
+}
+
+.modal-body li {
+  margin-bottom: 6px;
+}
+
+.modal-body strong {
+  letter-spacing: 0.2px;
+}
+
+@keyframes modal-in {
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 /* =========================================================
