@@ -6,16 +6,16 @@
   "host_permissions": ["<all_urls>"],
   "manifest_version": 3,
   "action": {
-    "default_icon": "code.png"
+    "default_icon": "assets/icons/code.png"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["content/contentScript.js"],
       "run_at": "document_idle"
     }
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background/serviceWorker.js"
   }
 }

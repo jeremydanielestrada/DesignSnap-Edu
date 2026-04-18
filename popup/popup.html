@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Meta tags for character set and responsive design -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Page title -->
+    <title>DesignSnap Edu</title>
+
+    <!-- Bootstrap CSS (local) for styling and layout -->
+    <link
+      href="../assets/vendor/bootstrap-5.3.2.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Custom stylesheet for additional styles -->
+    <link rel="stylesheet" href="popup.css" />
+
+    <!-- Favicon for the browser tab -->
+    <link rel="icon" href="../assets/icons/code.png" type="image/x-icon" />
+  </head>
+
+  <body>
+    <!-- Main application container -->
+    <div class="app-container container-fluid p-3">
+      <!-- Header section: logo and app identity -->
+      <header class="header">
+        <div class="header-content">
+          <div class="header-brand">
+            <!-- Logo -->
+            <img
+              src="../assets/icons/code.png"
+              alt="DesignSnap Edu logo"
+              class="header-logo"
+            />
+
+            <!-- App title and subtitle -->
+            <div class="header-text">
+              <h1>DesignSnap Edu</h1>
+              <span class="header-subtitle">
+                Educational UI Enhancement Assistant
+              </span>
+            </div>
+          </div>
+
+          <div class="header-actions">
+            <button
+              id="reset-btn"
+              type="button"
+              class="btn btn-outline-light btn-sm"
+            >
+              Reset
+            </button>
+            <button
+              id="close-extension-btn"
+              type="button"
+              class="btn btn-light btn-sm"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Flow indicator -->
+      <nav class="flow-bar" aria-label="Analysis progress">
+        <ol class="flow-steps">
+          <li class="flow-step is-active" data-step="capture">
+            <span class="flow-step-title">1. Capture</span>
+            <span class="flow-step-desc">Snapshot the page</span>
+          </li>
+          <li class="flow-step" data-step="extract">
+            <span class="flow-step-title">2. Extract</span>
+            <span class="flow-step-desc">HTML + CSS</span>
+          </li>
+          <li class="flow-step" data-step="suggest">
+            <span class="flow-step-title">3. Suggest</span>
+            <span class="flow-step-desc">AI improvements</span>
+          </li>
+        </ol>
+        <div id="flow-helper" class="flow-helper small text-muted">
+          Step 1: Capture a snapshot of the current page.
+        </div>
+      </nav>
+
+      <!-- Main content section -->
+      <main>
+        <!-- Introductory card: welcome message and purpose -->
+        <section class="intro card mb-3 shadow-sm">
+          <div class="card-body text-center">
+            <!-- Illustration -->
+            <img
+              src="../assets/images/web-development.png"
+              alt="Web development illustration"
+              width="140"
+              class="mb-2 intro-illustration"
+            />
+
+            <!-- Welcome title -->
+            <h2 class="h1 fw-bold mb-2">DesignSnap Edu</h2>
+
+            <!-- Intro description -->
+            <p
+              class="intro-desc text-muted mx-auto mb-4"
+              style="max-width: 580px"
+            >
+              Analyze a webpage and get beginner-friendly feedback on your
+              HTML/CSS structure, readability, and accessibility.
+            </p>
+
+            <!-- Key learning-focused features -->
+            <div
+              class="features-list d-flex justify-content-center gap-3 flex-wrap mb-4"
+            >
+              <div class="feature-item badge bg-light text-dark p-2 px-3">
+                <svg
+                  class="feature-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M3 4a2 2 0 0 1 2-2h6v6H3V4Zm0 8h8v10H5a2 2 0 0 1-2-2V12Zm10-10h6a2 2 0 0 1 2 2v4h-8V2Zm0 10h8v8a2 2 0 0 1-2 2h-6V12Z"
+                  />
+                </svg>
+                Structure feedback
+              </div>
+              <div class="feature-item badge bg-light text-dark p-2 px-3">
+                <svg
+                  class="feature-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 2a8 8 0 1 1-8 8a8 8 0 0 1 8-8Zm0 3a1 1 0 0 1 1 1v3.59l2.3 2.3a1 1 0 1 1-1.42 1.42l-2.59-2.6A1 1 0 0 1 11 12V8a1 1 0 0 1 1-1Z"
+                  />
+                </svg>
+                Clear explanations
+              </div>
+              <div class="feature-item badge bg-light text-dark p-2 px-3">
+                <svg
+                  class="feature-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M5 3h10a3 3 0 0 1 3 3v13a2 2 0 0 1-2 2H6a3 3 0 0 0-3 3V6a3 3 0 0 1 2-3Zm0 2a1 1 0 0 0 0 2h9a1 1 0 0 1 0 2H5v2h9a1 1 0 0 1 0 2H5v6.17A4.99 4.99 0 0 1 6 21h10V6a1 1 0 0 0-1-1H5Z"
+                  />
+                </svg>
+                Learn the “why”
+              </div>
+            </div>
+
+            <!-- Primary call to action -->
+            <button
+              id="starter-btn"
+              type="button"
+              class="btn btn-teal px-5 py-2 mb-2"
+            >
+              Analyze My Page
+            </button>
+
+            <div class="mt-2">
+              <button
+                id="privacy-btn"
+                type="button"
+                class="btn btn-link btn-sm text-muted p-0"
+              >
+                Privacy Policy
+              </button>
+            </div>
+
+            <div class="privacy-controls mt-3">
+              <label class="form-check d-inline-flex align-items-center gap-2">
+                <input
+                  id="privacy-consent"
+                  class="form-check-input m-0"
+                  type="checkbox"
+                />
+                <span class="small text-muted">
+                  I understand my extracted HTML/CSS may be sent for analysis
+                </span>
+              </label>
+
+              <div class="d-flex justify-content-center gap-3 flex-wrap mt-2">
+                <label
+                  class="form-check d-inline-flex align-items-center gap-2"
+                >
+                  <input
+                    id="redact-forms"
+                    class="form-check-input m-0"
+                    type="checkbox"
+                    checked
+                  />
+                  <span class="small text-muted">Redact form values</span>
+                </label>
+                <label
+                  class="form-check d-inline-flex align-items-center gap-2"
+                >
+                  <input
+                    id="strip-scripts"
+                    class="form-check-input m-0"
+                    type="checkbox"
+                    checked
+                  />
+                  <span class="small text-muted">Remove scripts</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Developer credit -->
+            <p class="small text-muted mb-0">
+              Developed by
+              <strong>Jeremy Daniel E. Estrada</strong>,
+              <strong>Vicryl Kez R. Lumanao</strong>, and
+              <strong>Leovin Jozh T. Salarda</strong>
+            </p>
+          </div>
+        </section>
+
+        <!-- Loader section: shows during webpage analysis -->
+        <div
+          id="loader-container"
+          class="loader-section d-none text-center mb-3"
+          role="status"
+          aria-live="polite"
+        >
+          <!-- Spinner animation -->
+          <div
+            id="extraction-loader"
+            class="d-flex justify-content-center mb-2"
+            aria-hidden="true"
+          >
+            <div
+              class="spinner-border text-primary"
+              role="status"
+              style="width: 2rem; height: 2rem"
+            >
+              <span class="visually-hidden">Loading…</span>
+            </div>
+          </div>
+          <!-- Loading text -->
+          <p id="loader-text" class="mb-2 small text-muted">
+            Extracting resources…
+          </p>
+          <div class="loader-progress mb-2" aria-hidden="true">
+            <div
+              id="loader-progress-bar"
+              class="loader-progress-bar"
+              style="width: 0%"
+            ></div>
+          </div>
+          <details class="loader-details mx-auto" style="max-width: 640px">
+            <summary class="small text-muted">Show details</summary>
+            <!-- Step-by-step progress display -->
+            <div class="loader-steps small text-muted mt-2">
+              <div class="step">Initializing resource extraction…</div>
+              <div class="step">Capturing a snapshot of the webpage</div>
+              <div class="step">
+                Scanning HTML structure for elements and attributes
+              </div>
+              <div class="step">
+                Analyzing CSS stylesheets and inline styles
+              </div>
+              <div class="step">Detecting potential layout issues</div>
+              <div class="step">Compiling suggestions for improvement</div>
+              <div class="step">
+                Finalizing extraction and preparing results
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Error message section -->
+        <div id="error" class="error-section d-none mb-3" role="alert"></div>
+
+        <!-- Truncation notice -->
+        <div
+          id="truncation-notice"
+          class="alert alert-warning d-none mb-3"
+          role="status"
+          aria-live="polite"
+        ></div>
+
+        <!-- Extracted DOM and code analysis section -->
+        <section class="extracted-DOM d-none">
+          <!-- Page context / status -->
+          <article class="section-card card mb-3">
+            <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+              <span class="badge text-bg-light">
+                Page: <span id="page-host" class="fw-semibold">—</span>
+              </span>
+              <span class="badge text-bg-light">
+                Title: <span id="page-title" class="fw-semibold">—</span>
+              </span>
+              <a
+                id="page-url"
+                class="badge text-bg-light text-decoration-none"
+                href="#"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Open analyzed page in a new tab"
+              >
+                Open page
+              </a>
+              <span class="badge text-bg-light">
+                Captured:
+                <time id="captured-at" class="fw-semibold" datetime=""></time>
+              </span>
+              <span class="badge text-bg-light">
+                HTML: <span id="payload-html" class="fw-semibold">—</span>
+              </span>
+              <span class="badge text-bg-light">
+                CSS: <span id="payload-css" class="fw-semibold">—</span>
+              </span>
+            </div>
+          </article>
+
+          <!-- Website snapshot card -->
+          <article class="section-card card mb-3">
+            <div class="card-header text-center">
+              <h2 class="fw-bold">Website Snapshot</h2>
+              <h6 class="text-muted">Current view of your webpage</h6>
+            </div>
+            <div
+              id="snapshot-container"
+              class="snapshot-wrapper card-body d-flex justify-content-center align-items-center"
+            ></div>
+          </article>
+
+          <!-- Code analysis card: HTML and CSS tabs -->
+          <article class="section-card card mb-3">
+            <div class="card-header">
+              <h2 class="fw-bold">Code Analysis</h2>
+              <h6 class="text-muted">Extracted HTML and CSS</h6>
+            </div>
+
+            <div class="card-body">
+              <!-- Tab buttons to switch between HTML and CSS -->
+              <div
+                class="code-tabs btn-group mb-3"
+                role="tablist"
+                aria-label="Code tabs"
+              >
+                <button
+                  id="tab-html"
+                  class="tab-btn btn btn-outline-secondary active"
+                  data-tab="html"
+                  type="button"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="html-tab"
+                >
+                  HTML <span id="html-size" class="tab-meta"></span>
+                </button>
+                <button
+                  id="tab-css"
+                  class="tab-btn btn btn-outline-secondary"
+                  data-tab="css"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="css-tab"
+                >
+                  CSS <span id="css-size" class="tab-meta"></span>
+                </button>
+              </div>
+
+              <!-- Tab content containers -->
+              <div class="code-content">
+                <!-- HTML code tab -->
+                <div
+                  id="html-tab"
+                  class="tab-content active"
+                  role="tabpanel"
+                  aria-labelledby="tab-html"
+                >
+                  <div
+                    class="code-header d-flex justify-content-between align-items-center mb-0"
+                  >
+                    <span class="code-language small text-uppercase">HTML</span>
+                    <div class="d-flex gap-2 align-items-center">
+                      <label class="code-toggle small text-muted me-1">
+                        <input id="wrap-toggle" type="checkbox" /> Wrap
+                      </label>
+                      <label class="code-toggle small text-muted me-1">
+                        <span class="me-1">Font</span>
+                        <input
+                          id="font-size"
+                          type="range"
+                          min="12"
+                          max="18"
+                          value="14"
+                        />
+                      </label>
+                      <button
+                        id="copy-all-btn"
+                        class="btn btn-sm btn-outline-secondary"
+                        type="button"
+                      >
+                        Copy All
+                      </button>
+                      <details class="download-menu">
+                        <summary class="btn btn-sm btn-outline-secondary">
+                          Download
+                        </summary>
+                        <div class="download-menu-items">
+                          <button
+                            id="download-md-btn"
+                            class="btn btn-sm btn-outline-secondary"
+                            type="button"
+                          >
+                            Export (.md)
+                          </button>
+                          <button
+                            id="download-html-btn"
+                            class="btn btn-sm btn-outline-secondary"
+                            type="button"
+                          >
+                            HTML (.html)
+                          </button>
+                          <button
+                            id="download-css-btn"
+                            class="btn btn-sm btn-outline-secondary"
+                            type="button"
+                          >
+                            CSS (.css)
+                          </button>
+                        </div>
+                      </details>
+                      <!-- Copy HTML button -->
+                      <button
+                        class="copy-btn copy-code-btn"
+                        data-target="html-output"
+                        type="button"
+                        aria-label="Copy code"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <div id="html-container" class="code-container mt-2">
+                    <pre
+                      class="mb-0 code-pre"
+                    ><code id="html-output" tabindex="0"></code></pre>
+                  </div>
+                </div>
+
+                <!-- CSS code tab -->
+                <div
+                  id="css-tab"
+                  class="tab-content d-none"
+                  role="tabpanel"
+                  aria-labelledby="tab-css"
+                >
+                  <div
+                    class="code-header d-flex justify-content-between align-items-center mb-0"
+                  >
+                    <span class="code-language small text-uppercase">CSS</span>
+                    <div class="d-flex gap-2 align-items-center">
+                      <!-- Copy CSS button -->
+                      <button
+                        class="copy-btn copy-code-btn"
+                        data-target="css-output"
+                        type="button"
+                        aria-label="Copy code"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <div id="CSS-container" class="code-container mt-2">
+                    <pre
+                      class="mb-0 code-pre"
+                    ><code id="css-output" tabindex="0"></code></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Button to generate AI suggestions -->
+          <div class="action-section text-center mb-3">
+            <button
+              id="suggest-btn"
+              class="btn btn-teal px-4"
+              disabled
+              aria-disabled="true"
+            >
+              Generate AI Suggestions
+            </button>
+            <p class="small text-muted mt-2 mb-0">
+              Tip: click <strong>Analyze My Page</strong> first to extract code.
+            </p>
+          </div>
+        </section>
+
+        <!-- AI-powered suggestions panel -->
+        <aside
+          class="suggestions-container card d-none"
+          id="suggestions-container"
+          aria-hidden="true"
+        >
+          <div class="card-header text-center">
+            <h2 id="suggestions-heading" class="fw-bold mb-1" tabindex="-1">
+              AI-Powered Suggestions
+            </h2>
+            <p class="suggestions-desc small mb-0 text-muted">
+              Simple explanations to help you improve your design
+            </p>
+          </div>
+          <nav
+            id="suggestions-nav"
+            class="suggestions-nav d-none"
+            aria-label="Suggestions navigation"
+          ></nav>
+          <div
+            class="suggestions-content card-body"
+            id="suggestions-content"
+          ></div>
+
+          <div class="text-center mb-3">
+            <button
+              id="back-to-code-btn"
+              class="btn btn-outline-secondary px-4"
+            >
+              Back to Code
+            </button>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <!-- Main JavaScript file -->
+    <script src="popup.js"></script>
+
+    <div id="sr-status" class="visually-hidden" aria-live="polite"></div>
+
+    <!-- Privacy modal (no Bootstrap JS required) -->
+    <div id="privacy-modal" class="modal-overlay d-none" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <strong>Privacy Policy</strong>
+          <button
+            id="privacy-close-btn"
+            class="btn btn-sm btn-light"
+            type="button"
+          >
+            Close
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">
+            We value your privacy. This extension does not use Google Analytics
+            or third-party tracking tools. We do not collect analytics
+            information such as your IP address, browser type, device type, or
+            time spent in the extension for tracking purposes.
+          </p>
+
+          <p class="mb-2">
+            We do not collect personal information unless you voluntarily
+            provide it (for example, through direct communication).
+          </p>
+
+          <hr class="my-3" />
+
+          <strong class="d-block mb-2">What is sent for analysis</strong>
+          <ul class="mb-2">
+            <li>Extracted HTML (may be truncated)</li>
+            <li>Extracted external CSS (may be truncated)</li>
+            <li>Used only to generate suggestions</li>
+          </ul>
+          <p class="small text-muted mb-0">
+            Tip: avoid analyzing pages with sensitive content (e.g., banking,
+            private dashboards). Use the toggles to redact form values and
+            remove scripts before extraction.
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

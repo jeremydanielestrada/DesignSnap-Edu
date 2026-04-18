@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![DesignSnap Edu Logo](code.png)
+![DesignSnap Edu Logo](assets/icons/code.png)
 
 **AI-Powered UI/UX Analysis Chrome Extension**
 
@@ -118,16 +118,21 @@ Use the copy buttons to easily copy suggested improvements and apply them to you
 
 ```
 DesignSnap-Edu/
-├── manifest.json          # Extension configuration
-├── popup.html            # Main UI structure
-├── popup.js              # Core functionality & API integration
-├── style.css             # Extension styling
-├── background.js         # Background service worker
-├── content.js            # Content script (currently unused)
-├── code.png              # Extension icon/logo
-├── web-development.png   # UI illustration
-├── README.md             # This file
-└── BUGFIX_SUMMARY.md     # Development notes
+├── manifest.json                 # Extension configuration (MV3)
+├── background/
+│   └── serviceWorker.js          # Background service worker
+├── content/
+│   └── contentScript.js          # Content script (currently unused)
+├── popup/
+│   ├── popup.html                # UI
+│   ├── popup.js                  # UI logic & API integration
+│   └── popup.css                 # UI styling
+├── assets/
+│   ├── icons/
+│   │   └── code.png              # Extension icon/logo
+│   └── images/
+│       └── web-development.png   # UI illustration
+└── README.md                     # This file
 ```
 
 ---
