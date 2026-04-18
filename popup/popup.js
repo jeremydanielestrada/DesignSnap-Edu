@@ -143,7 +143,9 @@ function requireConsent() {
   showToast("Please accept the privacy consent first.", "danger");
   document.getElementById("privacy-btn")?.focus();
   document.getElementById("privacy-modal")?.classList.remove("d-none");
-  document.getElementById("privacy-modal")?.setAttribute("aria-hidden", "false");
+  document
+    .getElementById("privacy-modal")
+    ?.setAttribute("aria-hidden", "false");
   return false;
 }
 
@@ -180,7 +182,8 @@ function updateCodeTabMeta(html, css) {
   if (htmlSize)
     htmlSize.textContent = html ? `(${formatBytes(html.length)})` : "";
   if (cssSize) cssSize.textContent = css ? `(${formatBytes(css.length)})` : "";
-  if (payloadHtml) payloadHtml.textContent = html ? formatBytes(html.length) : "—";
+  if (payloadHtml)
+    payloadHtml.textContent = html ? formatBytes(html.length) : "—";
   if (payloadCss) payloadCss.textContent = css ? formatBytes(css.length) : "—";
 
   const { htmlTruncated, cssTruncated } = computeTruncationFlags(html, css);
@@ -235,8 +238,10 @@ async function restoreState() {
 
     const htmlOutput = document.getElementById("html-output");
     const cssOutput = document.getElementById("css-output");
-    if (lastExtracted?.html && htmlOutput) htmlOutput.textContent = lastExtracted.html.trim();
-    if (lastExtracted?.css && cssOutput) cssOutput.textContent = lastExtracted.css.trim();
+    if (lastExtracted?.html && htmlOutput)
+      htmlOutput.textContent = lastExtracted.html.trim();
+    if (lastExtracted?.css && cssOutput)
+      cssOutput.textContent = lastExtracted.css.trim();
     updateCodeTabMeta(lastExtracted?.html || "", lastExtracted?.css || "");
     updatePageContext(lastExtractionMeta || { host: "—", title: "—" });
 
@@ -651,7 +656,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (step === "capture") {
         document.querySelector(".intro")?.classList.remove("d-none");
         document.querySelector(".extracted-DOM")?.classList.add("d-none");
-        document.getElementById("suggestions-container")?.classList.add("d-none");
+        document
+          .getElementById("suggestions-container")
+          ?.classList.add("d-none");
         setFlowStep("capture");
         document.getElementById("starter-btn")?.focus();
         return;
@@ -660,7 +667,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (step === "extract") {
         document.querySelector(".intro")?.classList.add("d-none");
         document.querySelector(".extracted-DOM")?.classList.remove("d-none");
-        document.getElementById("suggestions-container")?.classList.add("d-none");
+        document
+          .getElementById("suggestions-container")
+          ?.classList.add("d-none");
         setFlowStep("extract");
         document.getElementById("suggest-btn")?.focus();
         return;
@@ -670,7 +679,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!lastSuggestionParts) return;
         document.querySelector(".intro")?.classList.add("d-none");
         document.querySelector(".extracted-DOM")?.classList.add("d-none");
-        const suggestContainer = document.getElementById("suggestions-container");
+        const suggestContainer = document.getElementById(
+          "suggestions-container",
+        );
         suggestContainer?.classList.remove("d-none");
         suggestContainer?.setAttribute("aria-hidden", "false");
         setFlowStep("suggest");
@@ -692,8 +703,11 @@ document.addEventListener("DOMContentLoaded", () => {
   starterBtn.addEventListener("click", async () => {
     if (!requireConsent()) return;
     console.log("starter clicked");
-    const { tabId, url: tabUrl, title: tabTitle } =
-      await chrome.runtime.sendMessage({
+    const {
+      tabId,
+      url: tabUrl,
+      title: tabTitle,
+    } = await chrome.runtime.sendMessage({
       type: "GET_LAST_TAB",
     });
 
@@ -798,8 +812,9 @@ document.addEventListener("DOMContentLoaded", () => {
             let css = await fetchOriginalCSS();
             if (!css.trim())
               css = "/* No external CSS detected - page uses inline styles */";
-            if (css.length > 30000)
-              css = css.slice(0, 30000) + "\n/* truncated */";
+            // Keep in sync with server limit (20,000 chars)
+            if (css.length > 20000)
+              css = css.slice(0, 20000) + "\n/* truncated */";
 
             const meta = {
               title: document.title || "",
@@ -839,8 +854,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const { html, css } = result;
       lastExtracted = { html, css };
-      lastExtractionMeta =
-        result.meta ||
+      lastExtractionMeta = result.meta ||
         lastExtractionMeta || { url: tabUrl || "", title: tabTitle || "" };
 
       if (htmlOutput) htmlOutput.textContent = html.trim();
@@ -853,7 +867,9 @@ document.addEventListener("DOMContentLoaded", () => {
       htmlOutput?.focus();
       setSrStatus("Extraction complete. You can now generate AI suggestions.");
       saveState();
-      document.getElementById("suggest-btn")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document
+        .getElementById("suggest-btn")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
 
       const suggestContainer = document.getElementById("suggestions-container");
       suggestContainer?.classList.add("d-none");
@@ -1020,17 +1036,21 @@ document.addEventListener("DOMContentLoaded", () => {
     downloadMd();
   });
 
-  document.getElementById("download-html-btn")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    if (!lastExtracted) return;
-    downloadText("designsnap.html", lastExtracted.html || "", "text/html");
-  });
+  document
+    .getElementById("download-html-btn")
+    ?.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (!lastExtracted) return;
+      downloadText("designsnap.html", lastExtracted.html || "", "text/html");
+    });
 
-  document.getElementById("download-css-btn")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    if (!lastExtracted) return;
-    downloadText("designsnap.css", lastExtracted.css || "", "text/css");
-  });
+  document
+    .getElementById("download-css-btn")
+    ?.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (!lastExtracted) return;
+      downloadText("designsnap.css", lastExtracted.css || "", "text/css");
+    });
 });
 
 // ------------------- Loader Animation -------------------
@@ -1083,46 +1103,57 @@ async function handleSuggestions(html, css) {
     const suggestions = await getSuggestionBYGroq(html, css);
 
     if (suggestions?.success && suggestions?.analysis) {
-      const parsed = suggestions?.parsed || suggestions?.parsed_legacy || null;
+      const parsed = suggestions?.parsed_legacy || suggestions?.parsed || null;
       const parts = parsed
         ? parseAIParsedResponse(parsed)
         : parseAIResponse(suggestions.analysis);
 
+      // If the model returned analysis text but our section-based parsing produced
+      // an empty summary/issues view, fall back to rendering the full text.
+      const analysisHasRealContent = (() => {
+        const plain = String(parts?.analysisText || "")
+          .replace(/\s+/g, " ")
+          .trim();
+        const htmlPlain = String(parts?.analysisHtml || "")
+          .replace(/<[^>]*>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        return plain.length > 20 || htmlPlain.length > 80;
+      })();
+
+      if (!analysisHasRealContent && typeof suggestions.analysis === "string") {
+        const full = String(suggestions.analysis).trim();
+        if (full) {
+          parts.analysisHtml = `
+            <h5 class="mb-2">Summary</h5>
+            <div class="small text-muted">${formatMarkdownText(full)}</div>
+          `;
+          parts.analysisText = full;
+        }
+      }
+
+      const hasHtml = Boolean(parts?.htmlCode && String(parts.htmlCode).trim());
+      const hasCss = Boolean(parts?.cssCode && String(parts.cssCode).trim());
+      if (!hasHtml && !hasCss) {
+        parts.htmlCode = String(html || "").trim();
+        parts.cssCode = String(css || "").trim();
+        parts.analysisHtml = `
+          <div class="alert alert-warning mb-3">
+            AI response did not include code suggestions. Showing extracted code as fallback.
+          </div>
+          ${parts.analysisHtml || ""}
+        `;
+      }
+
       lastSuggestionParts = parts;
 
-      if ((parts.htmlCode && parts.htmlCode.trim()) || (parts.cssCode && parts.cssCode.trim())) {
-        renderSuggestionsBlock(
-          parts.analysisHtml,
-          parts.htmlCode || "No HTML suggestions provided",
-          parts.cssCode || "No CSS suggestions provided",
-          parts.implementationHtml,
-          parts.previewHtmlDoc,
-        );
-      } else {
-        suggestionsContent.innerHTML = `
-          <div class="alert alert-warning mb-2">
-            AI response received, but no code suggestions were generated.
-            Try a simpler webpage or smaller HTML/CSS.
-          </div>
-          <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <strong class="m-0">Response</strong>
-              <button class="btn btn-sm btn-outline-secondary" type="button" id="copy-raw-ai-btn">Copy</button>
-            </div>
-            <div class="card-body small text-muted" style="max-height: 280px; overflow:auto;">
-              ${formatEnhancedResponse(suggestions.analysis || "")}
-            </div>
-          </div>
-        `;
-        document.getElementById("copy-raw-ai-btn")?.addEventListener("click", async () => {
-          try {
-            await navigator.clipboard.writeText(String(suggestions.analysis || ""));
-            showToast("Copied response");
-          } catch {
-            showToast("Copy failed", "danger");
-          }
-        });
-      }
+      renderSuggestionsBlock(
+        parts.analysisHtml,
+        parts.htmlCode || "",
+        parts.cssCode || "",
+        parts.implementationHtml,
+        parts.previewHtmlDoc,
+      );
 
       suggestContainer.classList.remove("d-none");
       suggestContainer.setAttribute("aria-hidden", "false");
@@ -1157,6 +1188,24 @@ async function handleSuggestions(html, css) {
 
 // ------------------- Parse AI Response -------------------
 function parseAIParsedResponse(parsed) {
+  const pickFirstString = (obj, keys) => {
+    for (const key of keys) {
+      const val = obj?.[key];
+      if (typeof val === "string" && val.trim()) return val;
+    }
+    return "";
+  };
+
+  const extractCodeBlocksFromText = (text) => {
+    if (typeof text !== "string" || !text.trim()) return { html: "", css: "" };
+    const htmlMatch = text.match(/```html([\s\S]*?)```/i);
+    const cssMatch = text.match(/```css([\s\S]*?)```/i);
+    return {
+      html: htmlMatch ? htmlMatch[1].trim() : "",
+      css: cssMatch ? cssMatch[1].trim() : "",
+    };
+  };
+
   const isV2 = parsed?.version === "v2";
 
   const bulletsToList = (items) => {
@@ -1182,9 +1231,13 @@ function parseAIParsedResponse(parsed) {
           ${issues
             .slice(0, 6)
             .map((it, idx) => {
-              const title = it?.title ? escapeHtml(String(it.title)) : `Issue ${idx + 1}`;
+              const title = it?.title
+                ? escapeHtml(String(it.title))
+                : `Issue ${idx + 1}`;
               const snippet = it?.snippet ? escapeHtml(String(it.snippet)) : "";
-              const why = it?.why_it_matters ? escapeHtml(String(it.why_it_matters)) : "";
+              const why = it?.why_it_matters
+                ? escapeHtml(String(it.why_it_matters))
+                : "";
               const steps = Array.isArray(it?.fix_steps) ? it.fix_steps : [];
               return `
                 <details class="suggest-issue">
@@ -1256,15 +1309,54 @@ function parseAIParsedResponse(parsed) {
       ? summaryBullets.map((b) => `- ${b}`).join("\n")
       : "";
 
+    const parsedHtml =
+      pickFirstString(parsed, [
+        "improved_html",
+        "html",
+        "html_code",
+        "suggested_html",
+        "after_html",
+      ]) || "";
+
+    const parsedCss =
+      pickFirstString(parsed, [
+        "improved_css",
+        "css",
+        "css_code",
+        "suggested_css",
+        "after_css",
+      ]) || "";
+
+    const parsedPreview =
+      pickFirstString(parsed, ["preview_html", "preview", "preview_doc"]) || "";
+
+    let htmlCode = parsedHtml;
+    let cssCode = parsedCss;
+
+    // Fallback: sometimes providers return code only inside a text field.
+    if (!htmlCode && !cssCode) {
+      const textFallback =
+        pickFirstString(parsed, [
+          "analysis",
+          "text",
+          "content",
+          "raw",
+          "message",
+        ]) || "";
+      const extracted = extractCodeBlocksFromText(textFallback);
+      htmlCode = extracted.html || htmlCode;
+      cssCode = extracted.css || cssCode;
+    }
+
     return {
       analysisHtml,
       analysisText: summaryText,
       implementationText: Array.isArray(whyBullets)
         ? whyBullets.map((b) => `- ${b}`).join("\n")
         : "",
-      htmlCode: parsed?.improved_html || "",
-      cssCode: parsed?.improved_css || "",
-      previewHtmlDoc: parsed?.preview_html || "",
+      htmlCode,
+      cssCode,
+      previewHtmlDoc: parsedPreview,
       implementationHtml: `
         <h6>Why These Changes Help</h6>
         ${implementationHtml}
@@ -1294,12 +1386,51 @@ function parseAIParsedResponse(parsed) {
     </div>
   `;
 
+  const parsedHtml =
+    pickFirstString(parsed, [
+      "improved_html",
+      "html",
+      "html_code",
+      "suggested_html",
+      "after_html",
+    ]) || "";
+
+  const parsedCss =
+    pickFirstString(parsed, [
+      "improved_css",
+      "css",
+      "css_code",
+      "suggested_css",
+      "after_css",
+    ]) || "";
+
+  let htmlCode = parsedHtml;
+  let cssCode = parsedCss;
+
+  if (!htmlCode && !cssCode) {
+    const textFallback =
+      pickFirstString(parsed, [
+        "summary_markdown",
+        "issues_markdown",
+        "why_markdown",
+        "checklist_markdown",
+        "analysis",
+        "text",
+        "content",
+        "raw",
+        "message",
+      ]) || "";
+    const extracted = extractCodeBlocksFromText(textFallback);
+    htmlCode = extracted.html || htmlCode;
+    cssCode = extracted.css || cssCode;
+  }
+
   return {
     analysisHtml,
     analysisText: `What Needs Improvement\n${summaryText}\n\nCommon Beginner Issues\n${issuesText}`,
     implementationText: whyText,
-    htmlCode: parsed?.improved_html || "",
-    cssCode: parsed?.improved_css || "",
+    htmlCode,
+    cssCode,
     previewHtmlDoc: "",
     implementationHtml,
   };
@@ -1541,6 +1672,105 @@ async function getPromptResponseByGroq(userPrompt) {
 }
 
 // ------------------- Render Suggestions -------------------
+function formatCssForDisplay(cssText) {
+  if (!cssText) return "";
+  const css = String(cssText).trim();
+  if (!css) return "";
+
+  // Light-touch formatting (keeps content safe for copying; not a full parser)
+  return css
+    .replace(/\r\n/g, "\n")
+    .replace(/\s+/g, " ")
+    .replace(/\s*{\s*/g, " {\n  ")
+    .replace(/;\s*/g, ";\n  ")
+    .replace(/\s*}\s*/g, "\n}\n\n")
+    .replace(/\n\s+\n/g, "\n\n")
+    .trim();
+}
+
+function formatHtmlForDisplay(htmlText) {
+  if (!htmlText) return "";
+  let html = String(htmlText).trim();
+  if (!html) return "";
+
+  html = html.replace(/\r\n/g, "\n");
+
+  // If it's already multi-line, keep it (just trim trailing spaces)
+  if (html.includes("\n")) {
+    return html
+      .split("\n")
+      .map((line) => line.replace(/[ \t]+$/g, ""))
+      .join("\n")
+      .trim();
+  }
+
+  // Insert newlines between tags for readability (simple heuristic)
+  html = html.replace(/></g, ">\n<");
+
+  // Basic indentation heuristic for common tags
+  const voidTags = new Set([
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
+  ]);
+
+  let indent = 0;
+  const lines = html
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const out = [];
+
+  for (const line of lines) {
+    const isClosing = /^<\/[a-zA-Z0-9-]+/.test(line);
+    const isOpening = /^<([a-zA-Z0-9-]+)(\s|>|\/>)/.test(line) && !isClosing;
+    const tagMatch = line.match(/^<([a-zA-Z0-9-]+)/);
+    const tag = tagMatch ? tagMatch[1].toLowerCase() : null;
+    const isSelfClosing = /\/>$/.test(line) || (tag && voidTags.has(tag));
+
+    if (isClosing) indent = Math.max(0, indent - 1);
+    out.push(`${"  ".repeat(indent)}${line}`);
+    if (isOpening && !isSelfClosing && !/\/>/.test(line) && !/^<!/.test(line))
+      indent += 1;
+  }
+
+  return out.join("\n").trim();
+}
+
+function buildSuggestedHtmlDoc(htmlCode, cssCode) {
+  const bodyHtml = formatHtmlForDisplay(htmlCode || "");
+  const css = formatCssForDisplay(cssCode || "");
+  const styleBlock = css ? `\n  <style>\n${css}\n  </style>\n` : "\n";
+
+  // If user already provided a full HTML document, prefer to keep it as-is.
+  const raw = String(htmlCode || "").trim();
+  if (/<!doctype\s+html/i.test(raw) || /<html[\s>]/i.test(raw)) {
+    return formatHtmlForDisplay(raw);
+  }
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suggested Page</title>${styleBlock}</head>
+<body>
+${bodyHtml || ""}
+</body>
+</html>`;
+}
+
 function renderSuggestionsBlock(
   analysisHtml,
   htmlCode,
@@ -1551,22 +1781,22 @@ function renderSuggestionsBlock(
   const container = document.getElementById("suggestions-content");
   if (!container) return;
 
+  const hasAnyCode =
+    Boolean(htmlCode && String(htmlCode).trim()) ||
+    Boolean(cssCode && String(cssCode).trim());
+
   const boilerplateHtml = htmlCode
-    ? `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Suggested Page</title>
-  <style rel="stylesheet"></style>
-</head>
-<body>
-${htmlCode}
-</body>
-</html>`
+    ? buildSuggestedHtmlDoc(htmlCode, cssCode)
     : "No HTML suggestions provided";
 
   container.innerHTML = `
+    ${
+      hasAnyCode
+        ? ""
+        : `<div class="alert alert-warning mb-3">
+            AI response did not include code suggestions. Showing the explanation only.
+          </div>`
+    }
     <!-- Summary -->
     <div class="row g-3 mb-3">
       <div class="col-12">
@@ -1668,7 +1898,7 @@ ${htmlCode}
           </div>
           <div class="card-body p-0">
             <pre class="mb-0 bg-dark text-white p-3 small suggestion-code-block"><code>${escapeHtml(
-              cssCode || "No CSS suggestions provided",
+              formatCssForDisplay(cssCode) || "No CSS suggestions provided",
             )}</code></pre>
           </div>
         </div>
