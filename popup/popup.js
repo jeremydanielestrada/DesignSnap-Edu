@@ -10,6 +10,8 @@ async function showSnapshot() {
 }
 
 let lastExtracted = null;
+let lastExtractionMeta = null;
+let lastErrorContext = null;
 
 function setSuggestEnabled(enabled) {
   const suggestBtn = document.getElementById("suggest-btn");
@@ -71,6 +73,202 @@ function showToast(message, variant = "success") {
     toast.classList.remove("is-visible");
     setTimeout(() => toast.remove(), 250);
   }, 2200);
+}
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes)) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  return `${mb.toFixed(2)} MB`;
+}
+
+function formatDurationShort(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  const totalSeconds = Math.max(1, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes <= 0) return `${seconds}s`;
+  if (seconds === 0) return `${minutes}m`;
+  return `${minutes}m ${seconds}s`;
+}
+
+function computeTruncationFlags(html, css) {
+  const htmlTruncated = Boolean(html && html.includes("<!-- truncated -->"));
+  const cssTruncated = Boolean(css && css.includes("/* truncated */"));
+  return { htmlTruncated, cssTruncated };
+}
+
+function updateCodeTabMeta(html, css) {
+  const htmlSize = document.getElementById("html-size");
+  const cssSize = document.getElementById("css-size");
+  if (htmlSize)
+    htmlSize.textContent = html ? `(${formatBytes(html.length)})` : "";
+  if (cssSize) cssSize.textContent = css ? `(${formatBytes(css.length)})` : "";
+
+  const { htmlTruncated, cssTruncated } = computeTruncationFlags(html, css);
+  if (htmlSize && htmlTruncated) htmlSize.textContent += " • truncated";
+  if (cssSize && cssTruncated) cssSize.textContent += " • truncated";
+}
+
+function buildDebugReport(context) {
+  const lines = [];
+  lines.push("DesignSnap Edu Debug Report");
+  lines.push(`Time: ${new Date().toISOString()}`);
+  if (context?.phase) lines.push(`Phase: ${context.phase}`);
+  if (context?.errorMessage) lines.push(`Error: ${context.errorMessage}`);
+  if (context?.page?.url) lines.push(`URL: ${context.page.url}`);
+  if (context?.page?.host) lines.push(`Host: ${context.page.host}`);
+  if (context?.page?.title) lines.push(`Title: ${context.page.title}`);
+  if (context?.sizes) {
+    lines.push(`HTML length: ${context.sizes.htmlLength ?? "?"}`);
+    lines.push(`CSS length: ${context.sizes.cssLength ?? "?"}`);
+    if (typeof context.sizes.htmlTruncated === "boolean")
+      lines.push(`HTML truncated: ${context.sizes.htmlTruncated}`);
+    if (typeof context.sizes.cssTruncated === "boolean")
+      lines.push(`CSS truncated: ${context.sizes.cssTruncated}`);
+  }
+  return lines.join("\n");
+}
+
+function tryParseJsonFromText(text) {
+  if (!text) return null;
+  const str = String(text);
+  const firstBrace = str.indexOf("{");
+  const lastBrace = str.lastIndexOf("}");
+  if (firstBrace < 0 || lastBrace < 0 || lastBrace <= firstBrace) return null;
+  const jsonCandidate = str.slice(firstBrace, lastBrace + 1);
+  try {
+    return JSON.parse(jsonCandidate);
+  } catch {
+    return null;
+  }
+}
+
+function humanizeGroqError(err) {
+  const raw = err?.message ? String(err.message) : String(err || "");
+
+  // Default fallback
+  const fallback = {
+    title: "Request failed",
+    message: raw || "Unknown error",
+  };
+
+  // Parse status code when present in our thrown error strings
+  const statusMatch = raw.match(/\b(\d{3})\b/);
+  const status = statusMatch ? Number(statusMatch[1]) : null;
+
+  const payload = tryParseJsonFromText(raw);
+  const groqMessage =
+    payload?.error?.message ||
+    payload?.message ||
+    (typeof payload === "string" ? payload : null);
+
+  // Rate limit (429)
+  if (status === 429 || payload?.error?.code === "rate_limit_exceeded") {
+    const waitMatch = String(groqMessage || raw).match(
+      /Please try again in\s+([0-9msh\.\s]+)\.?/i,
+    );
+    const waitText = waitMatch ? waitMatch[1].trim() : null;
+
+    return {
+      title: "Rate limit reached",
+      message: waitText
+        ? `The AI service is temporarily rate-limited. Please wait ${waitText} and try again.`
+        : "The AI service is temporarily rate-limited. Please wait a bit and try again.",
+    };
+  }
+
+  // Auth / billing / forbidden
+  if (status === 401 || status === 403) {
+    return {
+      title: "Access denied",
+      message:
+        "The AI request was rejected (authorization/billing issue). Check the server/API configuration and try again.",
+    };
+  }
+
+  // Server-side
+  if (status && status >= 500) {
+    return {
+      title: "Server error",
+      message:
+        "The AI service is having trouble right now. Please try again in a moment.",
+    };
+  }
+
+  if (groqMessage) {
+    return {
+      title: "AI request error",
+      message: groqMessage,
+    };
+  }
+
+  return fallback;
+}
+
+function showErrorCard({ title, message, phase }) {
+  const errorEl = document.getElementById("error");
+  if (!errorEl) return;
+
+  const page = lastExtractionMeta || null;
+  const sizes = lastExtracted
+    ? {
+        htmlLength: lastExtracted.html?.length ?? 0,
+        cssLength: lastExtracted.css?.length ?? 0,
+        ...computeTruncationFlags(lastExtracted.html, lastExtracted.css),
+      }
+    : null;
+
+  lastErrorContext = {
+    phase,
+    errorMessage: message,
+    page,
+    sizes,
+  };
+
+  errorEl.classList.remove("d-none");
+  errorEl.innerHTML = `
+    <div class="card border-danger">
+      <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+        <strong>${escapeHtml(title || "Something went wrong")}</strong>
+        <button type="button" class="btn btn-sm btn-light" id="error-close-btn">Close</button>
+      </div>
+      <div class="card-body">
+        <p class="mb-2">${escapeHtml(message || "Unknown error")}</p>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-outline-danger btn-sm" id="error-retry-btn">Retry</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="error-copy-debug-btn">Copy debug info</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("error-close-btn")?.addEventListener("click", () => {
+    errorEl.classList.add("d-none");
+    errorEl.innerHTML = "";
+  });
+
+  document
+    .getElementById("error-copy-debug-btn")
+    ?.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(buildDebugReport(lastErrorContext));
+        showToast("Copied debug info");
+      } catch {
+        showToast("Copy failed", "danger");
+      }
+    });
+
+  document.getElementById("error-retry-btn")?.addEventListener("click", () => {
+    const phaseName = lastErrorContext?.phase;
+    if (phaseName === "suggest") {
+      document.getElementById("suggest-btn")?.click();
+    } else {
+      document.getElementById("starter-btn")?.click();
+    }
+  });
 }
 
 // ------------------- UI Initialization -------------------
@@ -185,6 +383,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (resetBtn) {
     resetBtn.addEventListener("click", () => {
       lastExtracted = null;
+      lastExtractionMeta = null;
       setSuggestEnabled(false);
       setFlowStep("capture");
 
@@ -203,6 +402,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (cssOutput) cssOutput.textContent = "";
 
       updatePageContext({ host: "—", title: "—" });
+      updateCodeTabMeta("", "");
       document.getElementById("starter-btn")?.focus();
     });
   }
@@ -233,6 +433,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const cssOutput = document.getElementById("css-output");
 
     isError?.classList.add("d-none");
+    if (isError) isError.innerHTML = "";
     starter?.classList.add("d-none");
     extractLoader?.classList.remove("d-none");
     setFlowStep("extract");
@@ -292,9 +493,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const { html, css } = result;
       lastExtracted = { html, css };
+      lastExtractionMeta = result.meta || null;
 
       if (htmlOutput) htmlOutput.textContent = html.trim();
       if (cssOutput) cssOutput.textContent = css.trim();
+      updateCodeTabMeta(html, css);
 
       extractedDOM?.classList.remove("d-none");
       setSuggestEnabled(true);
@@ -306,16 +509,73 @@ document.addEventListener("DOMContentLoaded", () => {
       suggestContainer?.setAttribute("aria-hidden", "true");
     } catch (err) {
       console.error("Extraction error:", err);
-      if (isError) {
-        isError.classList.remove("d-none");
-        isError.textContent = "Error: " + (err.message || "Unknown error");
-      }
+      const friendly = humanizeGroqError(err);
+      showErrorCard({
+        title: friendly.title,
+        message: friendly.message,
+        phase: "extract",
+      });
       extractedDOM?.classList.add("d-none");
       setSuggestEnabled(false);
       setFlowStep("capture");
     } finally {
       extractLoader?.classList.add("d-none");
     }
+  });
+
+  // Code tools
+  document
+    .getElementById("copy-all-btn")
+    ?.addEventListener("click", async () => {
+      if (!lastExtracted) return;
+      const text = `<!-- HTML -->\n${lastExtracted.html || ""}\n\n/* CSS */\n${
+        lastExtracted.css || ""
+      }\n`;
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("Copied HTML + CSS");
+      } catch {
+        showToast("Copy failed", "danger");
+      }
+    });
+
+  document.getElementById("download-btn")?.addEventListener("click", () => {
+    if (!lastExtracted) return;
+    const { htmlTruncated, cssTruncated } = computeTruncationFlags(
+      lastExtracted.html,
+      lastExtracted.css,
+    );
+
+    const md = [
+      "# DesignSnap Edu Export",
+      "",
+      `- URL: ${lastExtractionMeta?.url || "—"}`,
+      `- Title: ${lastExtractionMeta?.title || "—"}`,
+      `- Captured: ${new Date().toLocaleString()}`,
+      `- HTML truncated: ${htmlTruncated}`,
+      `- CSS truncated: ${cssTruncated}`,
+      "",
+      "## HTML",
+      "```html",
+      lastExtracted.html || "",
+      "```",
+      "",
+      "## CSS",
+      "```css",
+      lastExtracted.css || "",
+      "```",
+      "",
+    ].join("\n");
+
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "designsnap-export.md";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   });
 });
 
@@ -369,7 +629,9 @@ async function handleSuggestions(html, css) {
     const suggestions = await getSuggestionBYGroq(html, css);
 
     if (suggestions?.success && suggestions?.analysis) {
-      const parts = parseAIResponse(suggestions.analysis);
+      const parts = suggestions?.parsed
+        ? parseAIParsedResponse(suggestions.parsed)
+        : parseAIResponse(suggestions.analysis);
 
       if (parts.htmlCode || parts.cssCode) {
         renderSuggestionsBlock(
@@ -405,17 +667,48 @@ async function handleSuggestions(html, css) {
     document.getElementById("suggestions-heading")?.focus();
   } catch (err) {
     console.error("Suggestion error:", err);
-    suggestionsContent.innerHTML = `<div class="alert alert-danger"><strong>Connection Error:</strong> ${escapeHtml(
-      err.message || "Unknown",
-    )}</div>`;
-    suggestContainer.classList.remove("d-none");
-    suggestContainer.setAttribute("aria-hidden", "false");
+    const friendly = humanizeGroqError(err);
+    showErrorCard({
+      title: friendly.title,
+      message: friendly.message,
+      phase: "suggest",
+    });
   } finally {
     loader.classList.add("d-none");
   }
 }
 
 // ------------------- Parse AI Response -------------------
+function parseAIParsedResponse(parsed) {
+  const summaryText = parsed?.summary_markdown || "";
+  const issuesText = parsed?.issues_markdown || "";
+  const whyText = parsed?.why_markdown || "";
+  const checklistText = parsed?.checklist_markdown || "";
+
+  const analysisHtml = `
+    <h5>What Needs Improvement</h5>
+    <div class="small text-muted">${formatMarkdownText(summaryText)}</div>
+
+    <h5 class="mt-3">Common Beginner Issues</h5>
+    <div class="small text-muted">${formatMarkdownText(issuesText)}</div>
+  `;
+
+  const implementationHtml = `
+    <h6>Why These Changes Help</h6>
+    <div class="small text-muted">
+      ${formatMarkdownText(whyText)}
+      ${checklistText ? `<hr class="my-2" />${formatMarkdownText(checklistText)}` : ""}
+    </div>
+  `;
+
+  return {
+    analysisHtml,
+    htmlCode: parsed?.improved_html || "",
+    cssCode: parsed?.improved_css || "",
+    implementationHtml,
+  };
+}
+
 function parseAIResponse(content) {
   const getSection = (title) => {
     const regex = new RegExp(`###\\s*[^\\n]*${title}[\\s\\S]*?(?=###|$)`, "i");
@@ -507,8 +800,20 @@ function formatEnhancedResponse(text) {
 
 // ------------------- Markdown Formatter -------------------
 function formatMarkdownText(text) {
+  if (!text) return "";
+
+  // Normalize common bullet formats from the AI:
+  // - Leading "*" bullets
+  // - Inline "* " bullets that came back without newlines
+  let normalized = String(text)
+    // Convert leading asterisk bullets to dash bullets
+    .replace(/(^|\n)\s*\*\s+/g, "$1- ")
+    // If the model returns bullets inline like "... * Item one: ... * Item two: ...",
+    // force them onto new lines so they render as list items.
+    .replace(/\s+\*\s+(?=[A-Za-z0-9])/g, "\n- ");
+
   // Handle inline code first (before escaping HTML)
-  let formatted = text.replace(/`([^`]+)`/g, (match, code) => {
+  let formatted = normalized.replace(/`([^`]+)`/g, (match, code) => {
     // Escape HTML entities in code
     const escaped = code
       .replace(/&/g, "&amp;")
@@ -563,6 +868,25 @@ async function getSuggestionBYGroq(html, css) {
       payload = text;
     }
 
+    if (!resp.ok && resp.status === 429) {
+      const retryMs =
+        (payload && typeof payload === "object" && payload.retry_after_ms) ||
+        null;
+      const retryPretty = formatDurationShort(retryMs);
+      const suffix = retryPretty ? ` Please try again in ~${retryPretty}.` : "";
+      throw new Error(
+        (payload && typeof payload === "object" && payload.error) ||
+          `Too many requests.${suffix}`,
+      );
+    }
+
+    if (!resp.ok && resp.status >= 500) {
+      throw new Error(
+        (payload && typeof payload === "object" && payload.error) ||
+          "Server error while generating suggestions. Please try again.",
+      );
+    }
+
     if (!resp.ok)
       throw new Error(
         `Groq API request failed: ${resp.status} ${resp.statusText} — ${JSON.stringify(payload)}`,
@@ -594,11 +918,23 @@ async function getPromptResponseByGroq(userPrompt) {
       payload = { error: "Invalid response format" };
     }
 
+    if (!resp.ok && resp.status === 429) {
+      const retryMs =
+        (payload && typeof payload === "object" && payload.retry_after_ms) ||
+        null;
+      const retryPretty = formatDurationShort(retryMs);
+      const suffix = retryPretty ? ` Please try again in ~${retryPretty}.` : "";
+      throw new Error(
+        (payload && typeof payload === "object" && payload.error) ||
+          `Too many requests.${suffix}`,
+      );
+    }
+
     if (!resp.ok)
       throw new Error(
-        `API request failed: ${resp.status} ${resp.statusText} — ${JSON.stringify(payload)}`,
+        (payload && typeof payload === "object" && payload.error) ||
+          `Request failed (${resp.status}). Please try again.`,
       );
-
     return payload;
   } catch (error) {
     console.error("Prompt API error:", error);
@@ -632,98 +968,117 @@ ${htmlCode}
     : "No HTML suggestions provided";
 
   container.innerHTML = `
-    <!-- Before & After Comparison Section with Tabs -->
+    <!-- Summary -->
     <div class="row g-3 mb-3">
       <div class="col-12">
         <div class="card">
-          <div class="card-header comparison-header d-flex justify-content-between align-items-center">
-            <strong class="m-0">Before & After Comparison</strong>
-            <div class="btn-group btn-group-sm" role="group">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong class="m-0">Summary</strong>
+            <span class="badge text-bg-light">Key findings</span>
+          </div>
+          <div class="card-body">
+            ${analysisHtml}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview + Explanation -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-lg-7">
+        <div class="card h-100 preview-card">
+          <div class="card-header preview-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex flex-column">
+              <strong class="m-0">Before & After</strong>
+              <small class="text-muted">Visual preview of the page</small>
+            </div>
+
+            <div class="preview-tabs btn-group btn-group-sm" role="group" aria-label="Preview tabs">
               <button type="button" class="btn preview-tab-btn active" data-preview-tab="before">
-                BEFORE
+                Before
               </button>
               <button type="button" class="btn preview-tab-btn" data-preview-tab="after">
-                AFTER
+                After
               </button>
             </div>
           </div>
-          <div class="card-body p-0">
+
+          <div class="card-body p-0 preview-body-wrap">
             <!-- Before Tab Content -->
             <div id="before-preview-tab" class="preview-tab-content active">
-              <div class="position-relative" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 3px;">
-                <div class="text-center py-2 px-3" style="background: white;">
-                  <small class="fw-bold text-dark">ORIGINAL (Before AI Improvements)</small>
+              <div class="preview-surface preview-surface-before">
+                <div class="preview-surface-top">
+                  <span class="preview-pill">Original</span>
                 </div>
-                <div id="before-snapshot" style="background: #f8f9fa; min-height: 450px; overflow: hidden;">
-                  <div class="d-flex align-items-center justify-content-center h-100 p-3" style="height:450px;">
+                <div id="before-snapshot" class="preview-viewport">
+                  <div class="preview-placeholder">
                     <small class="text-muted">Loading snapshot...</small>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <!-- After Tab Content -->
             <div id="after-preview-tab" class="preview-tab-content" style="display: none;">
-              <div class="position-relative" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 3px;">
-                <div class="text-center py-2 px-3" style="background: white;">
-                  <small class="fw-bold text-dark">AI IMPROVED (After Suggestions Applied)</small>
+              <div class="preview-surface preview-surface-after">
+                <div class="preview-surface-top">
+                  <span class="preview-pill">AI Improved</span>
                 </div>
-                <div style="background: #fff; overflow: hidden;">
-                  <iframe 
-                    id="ai-preview" 
-                    sandbox="allow-same-origin" 
-                    style="width:100%; height:450px; border:none; display:block;"
-                  ></iframe>
+                <div class="preview-viewport preview-iframe-wrap">
+                  <iframe id="ai-preview" sandbox="allow-same-origin" class="preview-iframe"></iframe>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <div class="col-12 col-lg-5">
+        <div class="card h-100">
+          <div class="card-header">
+            <strong class="m-0">Why These Changes Help</strong>
+          </div>
+          <div class="card-body">
+            ${implementationHtml}
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="row g-3">
+    <!-- Code Suggestions -->
+    <div class="row g-3 mb-3">
       <div class="col-12 col-lg-6">
         <div class="card h-100">
-          <div class="card-body">
-            ${analysisHtml}
-            <div class="mt-3">
-              ${implementationHtml}
-            </div>
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong class="m-0">HTML Suggestion</strong>
+            <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="html">Copy</button>
+          </div>
+          <div class="card-body p-0">
+            <pre class="mb-0 bg-dark text-white p-3 small suggestion-code-block"><code>${escapeHtml(
+              boilerplateHtml,
+            )}</code></pre>
           </div>
         </div>
       </div>
 
       <div class="col-12 col-lg-6">
-  <!-- HTML Suggestion Card -->
-  <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <strong class="m-0">HTML Suggestion</strong>
-      <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="html">Copy</button>
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong class="m-0">CSS Suggestion</strong>
+            <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="css">Copy</button>
+          </div>
+          <div class="card-body p-0">
+            <pre class="mb-0 bg-dark text-white p-3 small suggestion-code-block"><code>${escapeHtml(
+              cssCode || "No CSS suggestions provided",
+            )}</code></pre>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="card-body p-0">     
-      <pre class="mb-0 bg-dark text-white p-3 small" style="max-height:600px; overflow:auto;">
-        <code>${escapeHtml(boilerplateHtml)}</code>
-      </pre>
-    </div>
-  </div>
 
-  <!-- CSS Suggestion Card -->
-  <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <strong class="m-0">CSS Suggestion</strong>
-      <button class="btn btn-sm btn-outline-secondary suggestion-copy-btn" data-lang="css">Copy</button>
-    </div>
-    <div class="card-body p-0">
-      <pre class="mb-0 bg-dark text-white p-3 small" style="max-height:600px; overflow:auto;">
-        <code>${escapeHtml(cssCode || "No CSS suggestions provided")}</code>
-      </pre>
-    </div>
-  </div>
-</div>
-
-      <!-- Ask Follow-up Question Section -->
-      <div class="col-12 mt-3">
+    <!-- Follow-up -->
+    <div class="row g-3">
+      <div class="col-12">
         <div class="card">
           <div class="card-header">
             <strong class="m-0">Ask a Follow-up Question</strong>
@@ -748,9 +1103,7 @@ ${htmlCode}
             <small class="text-muted d-block mt-2">
               Ask questions about the suggestions above to learn more!
             </small>
-            
-            <!-- Conversation History Container -->
-            <div id="conversation-history" class="mt-3" style="max-height: 600px; overflow-y: auto;"></div>
+            <div id="conversation-history" class="mt-3 conversation-history"></div>
           </div>
         </div>
       </div>
@@ -767,9 +1120,9 @@ ${htmlCode}
     .then(({ image }) => {
       const beforeContainer = document.getElementById("before-snapshot");
       if (beforeContainer && image) {
-        beforeContainer.innerHTML = `<img src="${image}" alt="Original Snapshot" style="width:100%; height:450px; object-fit: contain; display:block;" />`;
+        beforeContainer.innerHTML = `<img src="${image}" alt="Original Snapshot" class="preview-snapshot-img" />`;
       } else if (beforeContainer) {
-        beforeContainer.innerHTML = `<div class="d-flex align-items-center justify-content-center h-100 p-3" style="height:450px;"><small class="text-muted">No snapshot available</small></div>`;
+        beforeContainer.innerHTML = `<div class="preview-placeholder"><small class="text-muted">No snapshot available</small></div>`;
       }
     });
 
@@ -879,9 +1232,12 @@ function initializePromptHandler() {
       }
     } catch (err) {
       console.error("Prompt error:", err);
+      const friendly = humanizeGroqError(err);
       appendConversationPair(
         userPrompt,
-        `<div class="alert alert-danger mb-0"><strong>Connection Error:</strong> ${escapeHtml(err.message || "Unknown error")}</div>`,
+        `<div class="alert alert-danger mb-0"><strong>${escapeHtml(
+          friendly.title,
+        )}:</strong> ${escapeHtml(friendly.message)}</div>`,
         true,
       );
     } finally {
@@ -983,10 +1339,10 @@ function appendConversationPair(question, answer, isRawHtml = false) {
 // Close button handler is initialized on DOMContentLoaded (header button).
 
 function enhanceSuggestionsUI() {
-  // 1) Collapsible preview (first card in suggestions)
-  const previewCard = document.querySelector(
-    "#suggestions-content .row.g-3.mb-3 .card",
-  );
+  // 1) Collapsible preview (Before/After card in suggestions)
+  const previewCard = document
+    .querySelector("#suggestions-content .comparison-header")
+    ?.closest(".card");
   const previewHeader = previewCard?.querySelector(".card-header");
   const previewBody = previewCard?.querySelector(".card-body");
   if (previewHeader && previewBody) {

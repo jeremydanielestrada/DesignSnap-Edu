@@ -127,6 +127,14 @@ body {
   opacity: 0.85;
 }
 
+.intro-illustration {
+  opacity: 0.95;
+}
+
+.intro-desc {
+  margin-bottom: 0.75rem !important;
+}
+
 /* =========================================================F
    Buttons & Small Components
    ========================================================= */
@@ -146,6 +154,14 @@ body {
   display: flex;
   justify-content: center;
   gap: 6px;
+}
+
+.tab-meta {
+  font-size: 0.75rem;
+  opacity: 0.75;
+  font-weight: 600;
+  margin-left: 6px;
+  white-space: nowrap;
 }
 
 /* =========================================================
@@ -317,6 +333,24 @@ body {
   opacity: 0.7;
 }
 
+.code-pre {
+  max-height: 700px;
+  overflow: auto;
+}
+
+/* Sticky page context pills */
+.extracted-DOM .section-card:first-child {
+  position: sticky;
+  top: 10px;
+  z-index: 5;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.extracted-DOM .section-card:first-child .card-body {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
 /* Loader progress bar (visual only) */
 .loader-progress {
   width: min(520px, 100%);
@@ -334,6 +368,11 @@ body {
   background: linear-gradient(90deg, var(--teal), #17a2b8);
   border-radius: 999px;
   transition: width 0.25s ease;
+}
+
+.loader-details summary {
+  cursor: pointer;
+  user-select: none;
 }
 
 /* =========================================================
@@ -426,9 +465,9 @@ body {
   border-radius: 999px !important;
   font-weight: 600;
   padding: 0.35rem 1.1rem;
-  background: #0f1724;
-  color: #ffffff;
-  border: 1px solid #000000;
+  background: rgba(17, 24, 39, 0.06);
+  color: #111827;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   margin: 0 4px;
   min-width: 110px;
   transition:
@@ -438,10 +477,10 @@ body {
 }
 
 .preview-tab-btn.active {
-  background: #ffffff;
-  color: #0f1724;
-  border-color: #d9f7d2;
-  box-shadow: 0 0 0 2px rgba(217, 247, 210, 0.8);
+  background: #111827;
+  color: #ffffff;
+  border-color: #111827;
+  box-shadow: 0 10px 22px rgba(17, 24, 39, 0.18);
 }
 
 /* Suggestions code blocks */
@@ -455,16 +494,72 @@ body {
   background: #ffffff;
 }
 
-#before-snapshot {
-  background: #f8f9fa;
-  min-height: 450px;
-  overflow: hidden;
+/* Preview card redesign */
+.preview-header {
+  background: #ffffff;
 }
 
-#after-preview-tab iframe {
+.preview-body-wrap {
+  background: #ffffff;
+}
+
+.preview-surface {
+  padding: 3px;
+}
+
+.preview-surface-before {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.preview-surface-after {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.preview-surface-top {
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  justify-content: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.preview-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  background: rgba(17, 24, 39, 0.06);
+  color: #111827;
+}
+
+.preview-viewport {
+  background: #ffffff;
+  overflow: hidden;
+  min-height: 450px;
+}
+
+#before-snapshot.preview-viewport {
+  background: #f8f9fa;
+}
+
+.preview-iframe-wrap {
+  background: #ffffff;
+}
+
+.preview-iframe {
   width: 100%;
   height: 450px;
   border: none;
+  display: block;
+}
+
+.preview-snapshot-img {
+  width: 100%;
+  height: 450px;
+  object-fit: contain;
   display: block;
 }
 

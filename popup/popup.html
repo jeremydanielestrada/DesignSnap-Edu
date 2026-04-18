@@ -90,8 +90,8 @@
             <img
               src="../assets/images/web-development.png"
               alt="Web development illustration"
-              width="200"
-              class="mb-3"
+              width="140"
+              class="mb-2 intro-illustration"
             />
 
             <!-- Welcome title -->
@@ -102,9 +102,8 @@
               class="intro-desc text-muted mx-auto mb-4"
               style="max-width: 580px"
             >
-              DesignSnap Edu helps you understand your HTML and CSS better. It
-              analyzes your code and gives clear, beginner-friendly feedback so
-              you know what to improve, how to improve it, and why it matters.
+              Analyze a webpage and get beginner-friendly feedback on your
+              HTML/CSS structure, readability, and accessibility.
             </p>
 
             <!-- Key learning-focused features -->
@@ -112,13 +111,13 @@
               class="features-list d-flex justify-content-center gap-3 flex-wrap mb-4"
             >
               <div class="feature-item badge bg-light text-dark p-2 px-3">
-                🧩 Clear structure & layout feedback
+                🧩 Structure feedback
               </div>
               <div class="feature-item badge bg-light text-dark p-2 px-3">
-                🎯 Beginner-friendly explanations
+                🎯 Clear explanations
               </div>
               <div class="feature-item badge bg-light text-dark p-2 px-3">
-                📘 Learn the reasoning behind each suggestion
+                📘 Learn the “why”
               </div>
             </div>
 
@@ -173,22 +172,29 @@
               style="width: 0%"
             ></div>
           </div>
-          <!-- Step-by-step progress display -->
-          <div class="loader-steps small text-muted">
-            <div class="step">Initializing resource extraction…</div>
-            <div class="step">Capturing a snapshot of the webpage</div>
-            <div class="step">
-              Scanning HTML structure for elements and attributes
+          <details class="loader-details mx-auto" style="max-width: 640px">
+            <summary class="small text-muted">Show details</summary>
+            <!-- Step-by-step progress display -->
+            <div class="loader-steps small text-muted mt-2">
+              <div class="step">Initializing resource extraction…</div>
+              <div class="step">Capturing a snapshot of the webpage</div>
+              <div class="step">
+                Scanning HTML structure for elements and attributes
+              </div>
+              <div class="step">
+                Analyzing CSS stylesheets and inline styles
+              </div>
+              <div class="step">Detecting potential layout issues</div>
+              <div class="step">Compiling suggestions for improvement</div>
+              <div class="step">
+                Finalizing extraction and preparing results
+              </div>
             </div>
-            <div class="step">Analyzing CSS stylesheets and inline styles</div>
-            <div class="step">Detecting potential layout issues</div>
-            <div class="step">Compiling suggestions for improvement</div>
-            <div class="step">Finalizing extraction and preparing results</div>
-          </div>
+          </details>
         </div>
 
         <!-- Error message section -->
-        <div id="error" class="error-section d-none mb-3"></div>
+        <div id="error" class="error-section d-none mb-3" role="alert"></div>
 
         <!-- Extracted DOM and code analysis section -->
         <section class="extracted-DOM d-none">
@@ -243,7 +249,7 @@
                   aria-selected="true"
                   aria-controls="html-tab"
                 >
-                  HTML Structure
+                  HTML <span id="html-size" class="tab-meta"></span>
                 </button>
                 <button
                   id="tab-css"
@@ -254,7 +260,7 @@
                   aria-selected="false"
                   aria-controls="css-tab"
                 >
-                  CSS Styles
+                  CSS <span id="css-size" class="tab-meta"></span>
                 </button>
               </div>
 
@@ -271,20 +277,35 @@
                     class="code-header d-flex justify-content-between align-items-center mb-0"
                   >
                     <span class="code-language small text-uppercase">HTML</span>
-                    <!-- Copy HTML button -->
-                    <button
-                      class="copy-btn copy-code-btn"
-                      data-target="html-output"
-                      type="button"
-                      aria-label="Copy code"
-                    >
-                      Copy
-                    </button>
+                    <div class="d-flex gap-2 align-items-center">
+                      <button
+                        id="copy-all-btn"
+                        class="btn btn-sm btn-outline-secondary"
+                        type="button"
+                      >
+                        Copy All
+                      </button>
+                      <button
+                        id="download-btn"
+                        class="btn btn-sm btn-outline-secondary"
+                        type="button"
+                      >
+                        Download
+                      </button>
+                      <!-- Copy HTML button -->
+                      <button
+                        class="copy-btn copy-code-btn"
+                        data-target="html-output"
+                        type="button"
+                        aria-label="Copy code"
+                      >
+                        Copy
+                      </button>
+                    </div>
                   </div>
                   <div id="html-container" class="code-container mt-2">
                     <pre
-                      class="mb-0"
-                      style="max-height: 700px; overflow: auto"
+                      class="mb-0 code-pre"
                     ><code id="html-output" tabindex="0"></code></pre>
                   </div>
                 </div>
@@ -312,8 +333,7 @@
                   </div>
                   <div id="CSS-container" class="code-container mt-2">
                     <pre
-                      class="mb-0"
-                      style="max-height: 700px; overflow: auto"
+                      class="mb-0 code-pre"
                     ><code id="css-output" tabindex="0"></code></pre>
                   </div>
                 </div>
@@ -357,7 +377,10 @@
           ></div>
 
           <div class="text-center mb-3">
-            <button id="back-to-code-btn" class="btn btn-outline-secondary px-4">
+            <button
+              id="back-to-code-btn"
+              class="btn btn-outline-secondary px-4"
+            >
               Back to Code
             </button>
           </div>
