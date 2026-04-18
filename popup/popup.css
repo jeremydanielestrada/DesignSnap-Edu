@@ -716,6 +716,58 @@ input:focus-visible {
   transform: scale(0.96);
 }
 
+/* v2 issue list (details/summary) */
+.suggest-issue {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: rgba(248, 249, 250, 0.7);
+  overflow: hidden;
+}
+
+.suggest-issue-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.suggest-issue-summary::-webkit-details-marker {
+  display: none;
+}
+
+.suggest-issue-title {
+  font-weight: 700;
+  color: #212529;
+}
+
+.suggest-issue[open] .suggest-issue-summary {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+}
+
+.suggest-issue-body {
+  padding: 10px 12px 12px;
+}
+
+.suggest-snippet {
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  overflow: auto;
+  max-height: 120px;
+}
+
+.suggest-snippet code {
+  white-space: pre;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 12px;
+}
+
 /* =========================================================
    Before/After Comparison Tabs
    ========================================================= */

@@ -255,6 +255,7 @@ async function restoreState() {
         lastSuggestionParts.htmlCode,
         lastSuggestionParts.cssCode,
         lastSuggestionParts.implementationHtml,
+        lastSuggestionParts.previewHtmlDoc,
       );
       suggestContainer?.classList.remove("d-none");
       suggestContainer?.setAttribute("aria-hidden", "false");
@@ -1082,26 +1083,45 @@ async function handleSuggestions(html, css) {
     const suggestions = await getSuggestionBYGroq(html, css);
 
     if (suggestions?.success && suggestions?.analysis) {
-      const parts = suggestions?.parsed
-        ? parseAIParsedResponse(suggestions.parsed)
+      const parsed = suggestions?.parsed || suggestions?.parsed_legacy || null;
+      const parts = parsed
+        ? parseAIParsedResponse(parsed)
         : parseAIResponse(suggestions.analysis);
 
       lastSuggestionParts = parts;
 
-      if (parts.htmlCode || parts.cssCode) {
+      if ((parts.htmlCode && parts.htmlCode.trim()) || (parts.cssCode && parts.cssCode.trim())) {
         renderSuggestionsBlock(
           parts.analysisHtml,
           parts.htmlCode || "No HTML suggestions provided",
           parts.cssCode || "No CSS suggestions provided",
           parts.implementationHtml,
+          parts.previewHtmlDoc,
         );
       } else {
         suggestionsContent.innerHTML = `
-      <div class="alert alert-warning">
-        AI response received, but no code suggestions were generated. 
-        Try a simpler webpage or smaller HTML/CSS.
-      </div>
-    `;
+          <div class="alert alert-warning mb-2">
+            AI response received, but no code suggestions were generated.
+            Try a simpler webpage or smaller HTML/CSS.
+          </div>
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <strong class="m-0">Response</strong>
+              <button class="btn btn-sm btn-outline-secondary" type="button" id="copy-raw-ai-btn">Copy</button>
+            </div>
+            <div class="card-body small text-muted" style="max-height: 280px; overflow:auto;">
+              ${formatEnhancedResponse(suggestions.analysis || "")}
+            </div>
+          </div>
+        `;
+        document.getElementById("copy-raw-ai-btn")?.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(String(suggestions.analysis || ""));
+            showToast("Copied response");
+          } catch {
+            showToast("Copy failed", "danger");
+          }
+        });
       }
 
       suggestContainer.classList.remove("d-none");
@@ -1137,6 +1157,122 @@ async function handleSuggestions(html, css) {
 
 // ------------------- Parse AI Response -------------------
 function parseAIParsedResponse(parsed) {
+  const isV2 = parsed?.version === "v2";
+
+  const bulletsToList = (items) => {
+    if (!Array.isArray(items) || items.length === 0) return "";
+    return `<ul class="mb-0">${items
+      .filter(Boolean)
+      .slice(0, 8)
+      .map((b) => `<li>${escapeHtml(String(b))}</li>`)
+      .join("")}</ul>`;
+  };
+
+  if (isV2) {
+    const summaryBullets = parsed?.summary_bullets || [];
+    const topChanges = parsed?.top_changes || [];
+    const whyBullets = parsed?.why_bullets || [];
+    const checklist = parsed?.checklist || [];
+    const assumptions = parsed?.assumptions || [];
+    const confidence = parsed?.confidence || "";
+
+    const issues = Array.isArray(parsed?.issues) ? parsed.issues : [];
+    const issuesHtml = issues.length
+      ? `<div class="d-grid gap-2">
+          ${issues
+            .slice(0, 6)
+            .map((it, idx) => {
+              const title = it?.title ? escapeHtml(String(it.title)) : `Issue ${idx + 1}`;
+              const snippet = it?.snippet ? escapeHtml(String(it.snippet)) : "";
+              const why = it?.why_it_matters ? escapeHtml(String(it.why_it_matters)) : "";
+              const steps = Array.isArray(it?.fix_steps) ? it.fix_steps : [];
+              return `
+                <details class="suggest-issue">
+                  <summary class="suggest-issue-summary">
+                    <span class="suggest-issue-title">${title}</span>
+                  </summary>
+                  <div class="suggest-issue-body small text-muted">
+                    ${
+                      snippet
+                        ? `<div class="mb-2"><span class="text-uppercase small text-muted">Example</span><pre class="mt-1 mb-0 suggest-snippet"><code>${snippet}</code></pre></div>`
+                        : ""
+                    }
+                    ${why ? `<div class="mb-2"><strong>Why it matters:</strong> ${why}</div>` : ""}
+                    ${
+                      steps.length
+                        ? `<div><strong>How to fix:</strong>${bulletsToList(
+                            steps.map(String),
+                          )}</div>`
+                        : ""
+                    }
+                  </div>
+                </details>
+              `;
+            })
+            .join("")}
+        </div>`
+      : `<div class="small text-muted">No issues returned.</div>`;
+
+    const analysisHtml = `
+      <h5 class="mb-2">Summary</h5>
+      <div class="small text-muted">${bulletsToList(summaryBullets)}</div>
+
+      ${
+        topChanges && topChanges.length
+          ? `<h5 class="mt-3 mb-2">Top Improvements Applied</h5><div class="small text-muted">${bulletsToList(
+              topChanges,
+            )}</div>`
+          : ""
+      }
+
+      <h5 class="mt-3 mb-2">Common Beginner Issues</h5>
+      ${issuesHtml}
+
+      ${
+        assumptions && assumptions.length
+          ? `<h5 class="mt-3 mb-2">Assumptions</h5><div class="small text-muted">${bulletsToList(
+              assumptions,
+            )}</div>`
+          : ""
+      }
+
+      ${
+        confidence
+          ? `<div class="mt-3 small text-muted"><strong>Confidence:</strong> ${escapeHtml(
+              String(confidence),
+            )}</div>`
+          : ""
+      }
+    `;
+
+    const implementationHtml = `
+      <div class="small text-muted">
+        ${whyBullets?.length ? bulletsToList(whyBullets) : ""}
+        ${checklist?.length ? `<hr class="my-2" />${bulletsToList(checklist)}` : ""}
+      </div>
+    `;
+
+    const summaryText = Array.isArray(summaryBullets)
+      ? summaryBullets.map((b) => `- ${b}`).join("\n")
+      : "";
+
+    return {
+      analysisHtml,
+      analysisText: summaryText,
+      implementationText: Array.isArray(whyBullets)
+        ? whyBullets.map((b) => `- ${b}`).join("\n")
+        : "",
+      htmlCode: parsed?.improved_html || "",
+      cssCode: parsed?.improved_css || "",
+      previewHtmlDoc: parsed?.preview_html || "",
+      implementationHtml: `
+        <h6>Why These Changes Help</h6>
+        ${implementationHtml}
+      `,
+    };
+  }
+
+  // Legacy parsed format
   const summaryText = parsed?.summary_markdown || "";
   const issuesText = parsed?.issues_markdown || "";
   const whyText = parsed?.why_markdown || "";
@@ -1164,6 +1300,7 @@ function parseAIParsedResponse(parsed) {
     implementationText: whyText,
     htmlCode: parsed?.improved_html || "",
     cssCode: parsed?.improved_css || "",
+    previewHtmlDoc: "",
     implementationHtml,
   };
 }
@@ -1409,6 +1546,7 @@ function renderSuggestionsBlock(
   htmlCode,
   cssCode,
   implementationHtml,
+  previewHtmlDoc,
 ) {
   const container = document.getElementById("suggestions-content");
   if (!container) return;
@@ -1610,17 +1748,29 @@ ${htmlCode}
     });
 
   // Set up after preview iframe
-  const previewDoc = `
+  const baseHref =
+    (lastExtractionMeta && typeof lastExtractionMeta.url === "string"
+      ? lastExtractionMeta.url
+      : "") || "";
+
+  const previewDoc =
+    previewHtmlDoc && String(previewHtmlDoc).trim()
+      ? String(previewHtmlDoc)
+      : `
 <!doctype html>
 <html>
 <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  ${baseHref ? `<base href="${escapeHtml(baseHref)}" />` : ""}
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { 
-      margin: 0; 
-      padding: 8px; 
-      min-height: 100%; 
+    html, body {
+      margin: 0;
+      padding: 8px;
+      min-height: 100%;
       overflow: auto;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
     ${cssCode || ""}
   </style>
