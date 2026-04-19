@@ -1682,6 +1682,14 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function stripScriptsForPreview(html) {
+  if (!html) return "";
+  return String(html).replace(
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    "",
+  );
+}
+
 // ------------------- Groq API Proxy -------------------
 
 let lastSuggestionContent = null;
@@ -2118,7 +2126,7 @@ function renderSuggestionsBlock(
 
   const previewIframe = document.getElementById("ai-preview");
   if (previewIframe) {
-    previewIframe.srcdoc = previewDoc;
+    previewIframe.srcdoc = stripScriptsForPreview(previewDoc);
   }
 
   // Initialize preview tab switching
