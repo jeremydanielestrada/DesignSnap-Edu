@@ -1135,11 +1135,40 @@ async function handleSuggestions(html, css) {
       const hasHtml = Boolean(parts?.htmlCode && String(parts.htmlCode).trim());
       const hasCss = Boolean(parts?.cssCode && String(parts.cssCode).trim());
       if (!hasHtml && !hasCss) {
+        const fallbackReason = getFallbackReasonDetails({
+          suggestions,
+          parsed,
+          parts,
+        });
+        console.warn(
+          "AI returned no code suggestions; using extracted fallback.",
+          {
+            reasonCode: fallbackReason.code,
+            reasonMessage: fallbackReason.message,
+            hasParsed: Boolean(parsed),
+            responseKeys:
+              suggestions && typeof suggestions === "object"
+                ? Object.keys(suggestions)
+                : typeof suggestions,
+            parsedKeys:
+              parsed && typeof parsed === "object"
+                ? Object.keys(parsed)
+                : typeof parsed,
+            analysisSample:
+              typeof suggestions.analysis === "string"
+                ? suggestions.analysis.slice(0, 300)
+                : "",
+          },
+        );
         parts.htmlCode = String(html || "").trim();
         parts.cssCode = String(css || "").trim();
         parts.analysisHtml = `
           <div class="alert alert-warning mb-3">
             AI response did not include code suggestions. Showing extracted code as fallback.
+            <br />
+            <small class="d-block mt-1"><strong>Reason:</strong> ${escapeHtml(
+              fallbackReason.code,
+            )} - ${escapeHtml(fallbackReason.message)}</small>
           </div>
           ${parts.analysisHtml || ""}
         `;
@@ -1473,6 +1502,82 @@ function parseAIResponse(content) {
   };
 }
 
+function getFallbackReasonDetails({ suggestions, parsed, parts }) {
+  const hasAnalysis =
+    typeof suggestions?.analysis === "string" &&
+    String(suggestions.analysis).trim().length > 0;
+  const hasParsed = Boolean(parsed && typeof parsed === "object");
+  const parsedKeys = hasParsed ? Object.keys(parsed) : [];
+  const hasCodeFenceHtml = /```html[\s\S]*?```/i.test(
+    String(suggestions?.analysis || ""),
+  );
+  const hasCodeFenceCss = /```css[\s\S]*?```/i.test(
+    String(suggestions?.analysis || ""),
+  );
+  const hasExpectedParsedCodeKeys =
+    parsedKeys.includes("improved_html") || parsedKeys.includes("improved_css");
+  const hasEmptyCodeAfterParse =
+    !String(parts?.htmlCode || "").trim() &&
+    !String(parts?.cssCode || "").trim();
+
+  if (!suggestions || typeof suggestions !== "object") {
+    return {
+      code: "INVALID_RESPONSE_SHAPE",
+      message: "Response was not a valid object.",
+    };
+  }
+
+  if (!suggestions.success) {
+    return {
+      code: "UNSUCCESSFUL_RESPONSE",
+      message: "Service response was not successful.",
+    };
+  }
+
+  if (!hasAnalysis && !hasParsed) {
+    return {
+      code: "NO_ANALYSIS_OR_PARSED_DATA",
+      message: "Response had neither analysis text nor parsed JSON.",
+    };
+  }
+
+  if (!hasParsed && hasAnalysis && (hasCodeFenceHtml || hasCodeFenceCss)) {
+    return {
+      code: "MARKDOWN_ONLY_CODE_BLOCKS",
+      message:
+        "Model returned code in markdown blocks, but parsed JSON was missing.",
+    };
+  }
+
+  if (!hasParsed && hasAnalysis) {
+    return {
+      code: "UNPARSEABLE_ANALYSIS_TEXT",
+      message: "Analysis text could not be parsed into structured code fields.",
+    };
+  }
+
+  if (hasParsed && !hasExpectedParsedCodeKeys) {
+    return {
+      code: "PARSED_JSON_MISSING_CODE_KEYS",
+      message:
+        "Parsed JSON did not include expected code fields (improved_html/improved_css).",
+    };
+  }
+
+  if (hasParsed && hasEmptyCodeAfterParse) {
+    return {
+      code: "PARSED_CODE_FIELDS_EMPTY",
+      message:
+        "Parsed JSON contained code keys, but both code values were empty after parsing.",
+    };
+  }
+
+  return {
+    code: "UNKNOWN_FALLBACK_REASON",
+    message: "Fallback was triggered for an unspecified parsing reason.",
+  };
+}
+
 // ------------------- Enhanced Response Formatter -------------------
 function formatEnhancedResponse(text) {
   let result = "";
@@ -1575,6 +1680,14 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+function stripScriptsForPreview(html) {
+  if (!html) return "";
+  return String(html).replace(
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    "",
+  );
 }
 
 // ------------------- Groq API Proxy -------------------
@@ -2013,7 +2126,7 @@ function renderSuggestionsBlock(
 
   const previewIframe = document.getElementById("ai-preview");
   if (previewIframe) {
-    previewIframe.srcdoc = previewDoc;
+    previewIframe.srcdoc = stripScriptsForPreview(previewDoc);
   }
 
   // Initialize preview tab switching
